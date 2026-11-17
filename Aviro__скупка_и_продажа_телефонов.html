@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Гараж: наша четвёрка</title>
+<style>
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; font-family:-apple-system, system-ui, "Segoe UI", Roboto, sans-serif; font-size:15px; color:#fff; background:#0b0d12; }
+  button { font:inherit; cursor:pointer; border:none; border-radius:10px; padding:10px 14px; background:#eef0f3; color:#1f1f1f; }
+  button.primary { background:#00aaff; color:#fff; font-weight:600; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.sell { font-size:11px; padding:4px 8px; background:#f2d6d6; color:#8a1f1f; }
+  button.ghost { background:transparent; color:#00aaff; font-weight:700; padding:6px 10px; }
+
+  /* ===== ГАРАЖ ===== */
+  .garage { position:fixed; inset:0; background:linear-gradient(#2a2f3a 0%, #353b47 44%, #3f4552 45%, #1c1f26 100%); }
+  .lamp { position:absolute; top:0; left:50%; transform:translateX(-50%); width:180px; height:14px; background:#ffe9a8; border-radius:0 0 12px 12px; box-shadow:0 0 70px 24px rgba(255,220,130,.35); }
+  .hud { position:absolute; top:0; left:0; right:0; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; z-index:2; }
+  .title { font-weight:800; font-size:20px; text-shadow:0 2px 6px rgba(0,0,0,.6); }
+  .money { font-weight:700; background:rgba(0,0,0,.45); padding:6px 12px; border-radius:20px; }
+  .quest { position:absolute; top:62px; left:12px; right:12px; background:rgba(0,0,0,.55); border:1px solid rgba(0,170,255,.5); border-radius:12px; padding:10px 12px; font-size:14px; line-height:1.4; z-index:2; }
+  .cars { position:absolute; left:0; right:0; top:46%; display:flex; gap:12px; overflow-x:auto; padding:0 16px; z-index:1; }
+  .cars::-webkit-scrollbar { display:none; }
+  .slot { flex:0 0 150px; background:rgba(255,255,255,.08); color:#fff; border-radius:14px; padding:14px 10px; text-align:center; }
+  .slot .em { font-size:64px; line-height:1.1; }
+  .slot .nm { font-size:13px; margin-top:6px; }
+  .slot .sb { font-size:13px; color:#8fd8ff; margin-top:4px; font-weight:700; }
+  .empty-g { position:absolute; left:0; right:0; top:50%; text-align:center; color:#9aa0aa; padding:0 24px; }
+  .phone-btn { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); background:#00aaff; color:#fff; font-weight:700; padding:14px 22px; border-radius:30px; box-shadow:0 6px 20px rgba(0,170,255,.35); z-index:2; }
+  .hint { position:absolute; bottom:84px; left:0; right:0; text-align:center; color:#9aa0aa; font-size:13px; z-index:2; }
+
+  /* ===== КАРТОЧКА МАШИНЫ / РИГА ===== */
+  .sheet-bg { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.5); display:none; align-items:flex-end; justify-content:center; }
+  .sheet-bg.show { display:flex; }
+  .sheet { background:#fff; color:#1f1f1f; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; border-radius:18px 18px 0 0; padding:16px 16px 24px; position:relative; }
+  .sheet .big { font-size:90px; text-align:center; }
+  .sheet .p { font-size:22px; font-weight:800; }
+  .sheet .x { position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:50%; padding:0; }
+  .kv { display:flex; justify-content:space-between; font-size:14px; padding:7px 0; border-bottom:1px solid #e4e6eb; }
+  .kv span:first-child { color:#7b7f87; }
+  .sheet h4 { margin:16px 0 4px; font-size:15px; }
+  .btns { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 10px; }
+  .btns button { font-size:13px; padding:8px 10px; }
+
+  /* ===== ТЕЛЕФОН ===== */
+  .phone-bg { position:fixed; inset:0; z-index:60; background:#0f1115; display:none; align-items:stretch; justify-content:stretch; }
+  .phone-bg.show { display:flex; }
+  .phone { width:100vw; height:100vh; height:100dvh; background:#0f1115; border-radius:0; border:none; display:flex; flex-direction:column; overflow:hidden; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  .status { display:flex; justify-content:space-between; padding:12px 20px 6px; font-size:13px; color:#ccc; background:#0f1115; }
+  .screen { flex:1; overflow-y:auto; background:#f3f4f6; color:#1f1f1f; padding:12px; }
+  .screen.home { background:linear-gradient(#1c2a44,#0f1115); color:#fff; padding:28px 20px; }
+  .app { background:none; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px; }
+  .app .ico { width:64px; height:64px; border-radius:16px; background:#00aaff; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .ahead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .ahead .bal { font-weight:700; font-size:13px; }
+  .seg { display:flex; gap:4px; background:#e4e6eb; border-radius:10px; padding:3px; margin-bottom:10px; }
+  .seg button { flex:1; background:transparent; padding:7px 4px; font-weight:600; font-size:13px; color:#7b7f87; }
+  .seg button.on { background:#fff; color:#1f1f1f; }
+  .item { background:#fff; border-radius:12px; padding:10px; display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .item .ico-s { font-size:30px; width:44px; text-align:center; }
+  .item .grow { flex:1; min-width:0; }
+  .item .sub { font-size:12px; color:#7b7f87; margin-top:2px; }
+  .item button { font-size:13px; padding:8px 10px; white-space:nowrap; }
+  .refresh { width:100%; margin-top:6px; background:#dfe3ea; }
+  .sub { font-size:12px; color:#7b7f87; margin:4px 0 8px; }
+  .empty { text-align:center; color:#7b7f87; padding:24px 8px; }
+  .exit { margin:10px; background:#2a2d34; color:#fff; }
+  .grid-apps { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .wallet .kv { display:flex; justify-content:space-between; font-size:14px; padding:6px 0; border-bottom:1px solid #e4e6eb; }
+  .wallet .kv span:first-child { color:#7b7f87; }
+  .tag-ok { color:#1a9e4b; font-weight:800; font-size:20px; padding:0 6px; }
+  .wallet { background:#fff; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .wallet .big-n { font-size:22px; font-weight:800; }
+
+  /* ===== АДМИНКА ===== */
+  .modal { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .mbox { background:#fff; color:#1f1f1f; border-radius:14px; padding:16px; width:100%; max-width:360px; }
+  .mbox select { width:100%; padding:9px; border:1px solid #e4e6eb; border-radius:8px; font:inherit; margin:8px 0 6px; }
+
+  /* ===== ТОСТ ===== */
+  .toast { position:fixed; left:12px; right:12px; bottom:20px; background:#1f1f1f; color:#fff; padding:12px 14px; border-radius:10px; font-size:14px; z-index:80; text-align:center; }
+
+  /* ===== ВСТУПИТЕЛЬНАЯ СЦЕНА (нельзя пропустить) ===== */
+  .cut { position:fixed; inset:0; z-index:100; background:#0b0d12; overflow:hidden; touch-action:none; user-select:none; transition:opacity 1.2s; }
+  .cut.out { opacity:0; }
+  .scene { position:absolute; inset:0; overflow:hidden; }
+  .scene .car { font-size:110px; line-height:1; }
+  .market { background:linear-gradient(#2b3340,#15181f); display:flex; align-items:center; justify-content:center; }
+  .market .sign { position:absolute; top:16%; width:100%; text-align:center; font-size:26px; font-weight:800; }
+  .stand { animation:bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform:translateY(-6px); } }
+  .road { background:#2a2d33; }
+  .road::after { content:""; position:absolute; left:0; width:calc(100% + 80px); top:50%; height:6px; background:repeating-linear-gradient(90deg,#f5d000 0 40px,transparent 40px 80px); animation:lines .6s linear infinite; }
+  @keyframes lines { from { transform:translateX(0); } to { transform:translateX(-80px); } }
+  .drive-wrap { position:absolute; top:calc(50% - 90px); left:-160px; animation:drive 3s ease-in forwards; }
+  @keyframes drive { to { transform:translateX(calc(100vw + 320px)); } }
+  .scene.garage-cut { background:linear-gradient(#2a2f3a 0%, #353b47 44%, #3f4552 45%, #1c1f26 100%); }
+  .park-wrap { position:absolute; bottom:30%; left:50%; margin-left:-55px; animation:parkin 2.5s ease-out .5s forwards; }
+  @keyframes parkin { from { transform:translateX(-260px); } to { transform:translateX(0); } }
+  .cap { position:absolute; left:0; right:0; bottom:12%; text-align:center; padding:0 24px; font-size:18px; line-height:1.5; opacity:0; transition:opacity .3s; }
+  .cap.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="garage" id="garage">
+  <div class="lamp"></div>
+  <div class="hud">
+    <div class="title" onclick="titleTap()">Гараж</div>
+    <div class="money" id="money"></div>
+  </div>
+  <div class="quest" id="quest"></div>
+  <div class="empty-g" id="emptyG" style="display:none">Гараж пуст.</div>
+  <div class="cars" id="cars"></div>
+  <div class="hint">Нажми на машину или риг, чтобы открыть карточку</div>
+  <button class="phone-btn" onclick="openPhone()">📱 Телефон</button>
+</div>
+
+<div class="sheet-bg" id="carSheetBg" onclick="if(event.target===this)closeSheet()"><div class="sheet" id="carSheet"></div></div>
+
+<div class="phone-bg" id="phone">
+  <div class="phone">
+    <div class="status"><span id="ptime"></span><span class="live-money" id="pmoney"></span></div>
+    <div class="screen" id="pscreen"></div>
+    <button class="exit" onclick="closePhone()">Выйти из телефона</button>
+  </div>
+</div>
+
+<script>
+/* ===== ДАННЫЕ ===== */
+const CARS = [
+  { name:"ВАЗ-2104 «четвёрка»", base:600000 },
+  { name:"ВАЗ-2107 «семёрка»", base:250000 },
+  { name:"Lada Granta", base:450000 },
+  { name:"Ford Focus II", base:380000 },
+  { name:"Renault Logan", base:400000 },
+  { name:"Kia Rio", base:900000 },
+  { name:"Skoda Octavia A5", base:800000 },
+  { name:"BMW 3 E46", base:1100000 },
+  { name:"Mercedes W124", base:900000 },
+  { name:"Toyota Camry", base:2200000 }
+];
+const PARTS = {
+  engine:   { name:"Двигатель", prices:[15000,45000,120000] },
+  wheels:   { name:"Колёса",    prices:[5000,20000,50000] },
+  brakes:   { name:"Тормоза",   prices:[4000,15000,40000] },
+  paint:    { name:"Покраска",  prices:[10000,30000,90000] },
+  interior: { name:"Салон",     prices:[8000,25000,70000] },
+  audio:    { name:"Магнитола", prices:[6000,18000,50000] }
+};
+const RIGS = [
+  { name:"Риг «Старт»", power:10, price:120000 },
+  { name:"Риг «Мощь»",  power:30, price:350000 }
+];
+const TIER_NAMES = ["Ст.1","Ст.2","Ст.3"];
+const PART_VALUE = 0.8;
+const SELL_RATE = 0.95;
+const START_MONEY = 250000;   // на старт выдают деньги вместо машины
+const FOUR_PRICE = 500000;
+const COIN = "AVC";
+let COIN_PER_POWER = 0.02;   // монет в секунду с 1 единицы мощности
+let ELEC_PER_POWER = 3;      // ₽ за секунду с 1 единицы мощности
+let GOAL_COINS = 20;         // цель 2 главы
+let BILL_LIMIT = 20000;      // при счёте больше этого риги останавливаются
+const WIND = [
+  { name:"Ветряк «Малый»",   price:80000,  cover:10 },
+  { name:"Ветряк «Средний»", price:200000, cover:30 },
+  { name:"Ветряк «Большой»", price:600000, cover:100 }
+];
+let GARAGE_RENT = 5;
+const ADMIN_APP_PRICE = 20000;      // одноразовая покупка приложения «Админка», только при наличии ключа
+const ADMIN_KEY_PRICE = 1000000;    // цена ключа, без него админка не открывается   // ₽ в секунду за аренду гаража
+const COIN_MIN = 2000, COIN_MAX = 15000;
+let BTC_PER_MIN = 0.001;     // BTC в минуту с одного рига в режиме BTC
+let BTC_PER_SEC = BTC_PER_MIN / 60;
+let BTC_COST_PER_SEC = 30000;   // ₽ в секунду за майнинг BTC с одного рига (списывается с денег)
+const BTC_MIN = 3000000, BTC_MAX = 8000000;
+// Значения по умолчанию для настроек админки (вернуть как было)
+const CFG_DEFAULTS = { COIN_PER_POWER:0.02, ELEC_PER_POWER:3, GARAGE_RENT:5, BILL_LIMIT:20000,
+  BTC_PER_MIN:0.001, BTC_COST_PER_SEC:30000, GOAL_COINS:20, COIN_PRICE:5000, BTC_PRICE:5000000 };
+const CFG_FIELDS = [
+  ["COIN_PER_POWER", "AVC в секунду с 1 единицы мощности"],
+  ["ELEC_PER_POWER", "₽ в секунду за электричество с 1 единицы мощности"],
+  ["GARAGE_RENT", "Аренда гаража, ₽ в секунду"],
+  ["BILL_LIMIT", "Лимит счёта, ₽ (выше — риги стоят)"],
+  ["BTC_PER_MIN", "BTC в минуту с одного рига"],
+  ["BTC_COST_PER_SEC", "₽ в секунду за майнинг BTC"],
+  ["GOAL_COINS", "Цель 2 главы, AVC"],
+  ["COIN_PRICE", "Курс AVC, ₽"],
+  ["BTC_PRICE", "Курс BTC, ₽"]
+];
+function cfgValue(name){
+  return ({ COIN_PER_POWER, ELEC_PER_POWER, GARAGE_RENT, BILL_LIMIT, BTC_PER_MIN, BTC_COST_PER_SEC, GOAL_COINS,
+            COIN_PRICE:S.coinPrice, BTC_PRICE:S.btcPrice })[name];
+}
+function setCfg(name, v){
+  switch (name){
+    case "COIN_PER_POWER": COIN_PER_POWER = v; break;
+    case "ELEC_PER_POWER": ELEC_PER_POWER = v; break;
+    case "GARAGE_RENT": GARAGE_RENT = v; break;
+    case "BILL_LIMIT": BILL_LIMIT = v; break;
+    case "BTC_PER_MIN": BTC_PER_MIN = v; BTC_PER_SEC = v / 60; break;
+    case "BTC_COST_PER_SEC": BTC_COST_PER_SEC = v; break;
+    case "GOAL_COINS": GOAL_COINS = v; break;
+    case "COIN_PRICE": S.coinPrice = v; break;
+    case "BTC_PRICE": S.btcPrice = v; break;
+  }
+}
+function applyCfg(){ Object.entries((S && S.cfg) || {}).forEach(([k,v]) => setCfg(k, v)); }
+
+const SAVE_KEY = "garage-aviro-avto-v4";
+const GAME_VERSION = "2";   // поменяй номер, когда выпускаешь новую версию: ключи станут другими
+
+/* ===== УТИЛИТЫ ===== */
+const fmt = n => Math.round(n).toLocaleString("ru-RU") + " ₽";
+const rnd = (a,b) => a + Math.random()*(b-a);
+const r100 = n => Math.round(n/100)*100;
+const uid = () => Math.random().toString(36).slice(2,9);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+let S, phoneOpen=false, app=null,
+    openCarId=null, openRigId=null, toastT=null, titleTaps=0, titleTimer=null, tickN=0;
+
+/* ===== РАСЧЁТЫ ===== */
+function carValue(c){
+  let v = CARS[c.mi].base * c.cond;
+  for (const cat in c.parts) v += PARTS[cat].prices[c.parts[cat]] * PART_VALUE;
+  return r100(v);
+}
+const sellPrice = c => r100(carValue(c) * SELL_RATE);
+const totalPower = () => S.rigs.reduce((s,r)=>s+r.power, 0);
+const windCover = () => S.windmills.reduce((s,i)=>s+WIND[i].cover, 0);
+const consumption = () => totalPower();
+const elecRate = () => Math.max(0, consumption() - windCover()) * ELEC_PER_POWER;
+const billRate = () => elecRate() + GARAGE_RENT;
+const rigRate = r => r.mode==="btc" ? `${BTC_PER_MIN} BTC/мин` : `${(r.power*COIN_PER_POWER).toFixed(2)} ${COIN}/с`;
+const elecText = () => { const r = elecRate(); return r===0 ? "бесплатно (ветряки)" : fmt(r)+"/с"; };
+
+/* ===== ОБЪЯВЛЕНИЯ ===== */
+function makeCarListings(){
+  const out=[];
+  for (let i=0;i<6;i++){
+    const mi = Math.floor(Math.random()*CARS.length);
+    const cond = Math.round(rnd(0.5,1)*20)/20;
+    out.push({ id:uid(), mi, cond, price: r100(CARS[mi].base*cond*rnd(0.75,0.95)) });
+  }
+  return out;
+}
+function makePartListings(){
+  const out=[], cats=Object.keys(PARTS);
+  for (let i=0;i<8;i++){
+    const cat = cats[Math.floor(Math.random()*cats.length)];
+    const tier = Math.floor(Math.random()*3);
+    out.push({ id:uid(), cat, tier, price: PARTS[cat].prices[tier] });
+  }
+  return out;
+}
+
+/* ===== ДЕЙСТВИЯ: МАШИНЫ И ДЕТАЛИ ===== */
+function buyCar(id){
+  const l = S.carShop.find(x=>x.id===id); if(!l) return;
+  if (S.money < l.price) return toast("Не хватает денег.");
+  S.money -= l.price;
+  S.cars.push({ id:uid(), mi:l.mi, cond:l.cond, parts:{}, paid:l.price });
+  S.carShop = S.carShop.filter(x=>x.id!==id);
+  toast(`Куплено: ${CARS[l.mi].name}`); render();
+}
+function buyPart(id){
+  const l = S.partShop.find(x=>x.id===id); if(!l) return;
+  if (S.money < l.price) return toast("Не хватает денег.");
+  S.money -= l.price;
+  S.parts.push({ id:uid(), cat:l.cat, tier:l.tier, price:l.price });
+  S.partShop = S.partShop.filter(x=>x.id!==id);
+  toast(`Куплено: ${PARTS[l.cat].name} ${TIER_NAMES[l.tier]}`); render();
+}
+function installPart(carId, partId){
+  const c = S.cars.find(x=>x.id===carId), p = S.parts.find(x=>x.id===partId);
+  if(!c||!p) return;
+  if (c.parts[p.cat] !== undefined) returnPart(c, p.cat);
+  c.parts[p.cat] = p.tier;
+  S.parts = S.parts.filter(x=>x.id!==partId);
+  toast(`Установлено: ${PARTS[p.cat].name} ${TIER_NAMES[p.tier]}`); render();
+}
+function removePart(carId, cat){
+  const c = S.cars.find(x=>x.id===carId); if(!c||c.parts[cat]===undefined) return;
+  returnPart(c, cat); render();
+}
+function returnPart(c, cat){
+  const tier = c.parts[cat];
+  S.parts.push({ id:uid(), cat, tier, price:PARTS[cat].prices[tier] });
+  delete c.parts[cat];
+}
+function sellCar(id){
+  const c = S.cars.find(x=>x.id===id); if(!c) return;
+  const p = sellPrice(c);
+  S.money += p;
+  S.cars = S.cars.filter(x=>x.id!==id);
+  openCarId = null;
+  toast(`Продано за ${fmt(p)}`); render();
+}
+function refreshShop(){
+  S.carShop = makeCarListings(); S.partShop = makePartListings();
+  toast("Объявления обновлены"); render();
+}
+
+/* ===== ДЕЙСТВИЯ: МАЙНИНГ ===== */
+function buyRig(i){
+  const r = RIGS[i]; if(!r) return;
+  if (S.money < r.price) return toast("Не хватает денег.");
+  S.money -= r.price;
+  S.rigs.push({ id:uid(), name:r.name, power:r.power, mode:"avc" });
+  toast(`Куплен ${r.name}`);
+  if (S.rigs.length === 1) toast("Цель 1 выполнена! Теперь добудь монеты.");
+  render();
+}
+function sellCoins(n){
+  const amt = n===0 ? S.coins : Math.min(n, S.coins);
+  if (amt <= 0) return toast("Монет нет.");
+  const p = Math.floor(amt * S.coinPrice);
+  S.coins = Math.max(0, S.coins - amt);
+  S.money += p;
+  toast(`Продано ${amt.toFixed(2)} ${COIN} за ${fmt(p)}`); render();
+}
+// Майнинг раз в секунду: платим за электричество и добываем монеты
+function tick(){
+  if (!S) return;
+  tickN++;
+  const p = totalPower();
+  S.bill = Math.round((S.bill + billRate()) * 100) / 100;
+  S.mining = false;
+  if (p > 0 && S.bill < BILL_LIMIT){
+    S.mining = true;
+    for (const r of S.rigs){
+      if (r.mode === "btc"){
+        if (S.money >= BTC_COST_PER_SEC){ S.money -= BTC_COST_PER_SEC; S.btc += BTC_PER_SEC; }
+      }
+      else { const got = r.power * COIN_PER_POWER; S.coins += got; S.minedTotal += got; }
+    }
+    if (!S.ch2Done && S.minedTotal >= GOAL_COINS){
+      S.ch2Done = true;
+      toast("Цель 2 выполнена! Глава 2 пройдена.");
+    }
+  }
+  if (tickN % 5 === 0){
+    S.coinPrice = Math.min(COIN_MAX, Math.max(COIN_MIN, Math.round(S.coinPrice * rnd(0.97,1.03))));
+    S.btcPrice = Math.min(BTC_MAX, Math.max(BTC_MIN, Math.round(S.btcPrice * rnd(0.97,1.03))));
+  }
+  save(); updateLive();
+}
+function payBill(n){
+  if (S.bill <= 0) return toast("Счёт уже оплачен.");
+  const amt = n===0 ? S.bill : Math.min(n, S.bill);
+  const pay = Math.min(amt, S.money);
+  if (pay <= 0) return toast("Не хватает денег на оплату.");
+  S.money -= Math.round(pay);
+  S.bill = Math.max(0, Math.round((S.bill - pay) * 100) / 100);
+  toast(`Оплачено ${fmt(pay)}`); render();
+}
+function buyWind(i){
+  const w = WIND[i]; if(!w) return;
+  if (S.money < w.price) return toast("Не хватает денег.");
+  S.money -= w.price;
+  S.windmills.push(i);
+  toast(`Куплен ${w.name}. Покрыто мощности: ${windCover()}`); render();
+}
+const WIND_SELL_RATE = 0.5;   // продажа ветряка за половину цены покупки
+const RIG_SELL_RATE = 0.5;    // продажа рига за половину цены покупки
+const rigSellPrice = r => { const base = RIGS.find(x => x.name === r.name); return base ? Math.round(base.price * RIG_SELL_RATE) : 0; };
+function sellRig(i){
+  const r = S.rigs[i]; if (!r) return;
+  const p = rigSellPrice(r);
+  S.rigs.splice(i, 1);
+  S.money += p;
+  if (openRigId === r.id) openRigId = null;
+  toast(`Продан ${r.name} за ${fmt(p)}`); render();
+}
+function sellWind(i){
+  const idx = S.windmills.indexOf(i);
+  if (idx < 0) return toast("Такого ветряка нет.");
+  const p = Math.round(WIND[i].price * WIND_SELL_RATE);
+  S.windmills.splice(idx, 1);
+  S.money += p;
+  toast(`Продан ${WIND[i].name} за ${fmt(p)}`); render();
+}
+function toggleMode(i){
+  const r = S.rigs[i]; if(!r) return;
+  r.mode = r.mode==="btc" ? "avc" : "btc";
+  toast(`Риг переключён на ${r.mode==="btc" ? "BTC" : "AVC"}`); render();
+}
+function sellBtc(n){
+  const amt = n===0 ? S.btc : Math.min(n, S.btc);
+  if (amt <= 0) return toast("BTC нет.");
+  const p = Math.floor(amt * S.btcPrice);
+  S.btc = Math.max(0, S.btc - amt);
+  S.money += p;
+  toast(`Продано ${amt.toFixed(6)} BTC за ${fmt(p)}`); render();
+}
+
+/* ===== ЦЕЛИ ГЛАВЫ 2 ===== */
+function questHTML(){
+  if (S.ch2Done) return `<b>Глава 2 пройдена!</b> Ты добыл ${GOAL_COINS} ${COIN} своим ригом.`;
+  if (!S.rigs.length) return `<b>Цель 1.</b> Купи свой майнинг-риг в приложении «Майнинг» на телефоне.`;
+  return `<b>Цель 2.</b> Добудь ${GOAL_COINS} ${COIN}. Добыто: ${S.minedTotal.toFixed(2)} / ${GOAL_COINS}`;
+}
+
+/* ===== ГАРАЖ ===== */
+function renderGarage(){
+  document.getElementById("money").textContent = fmt(S.money);
+  document.getElementById("quest").innerHTML = questHTML();
+  const rigs = S.rigs.map((r,i) => `
+    <button class="slot" onclick="openRig(${i})">
+      <div class="em">⛏️</div>
+      <div class="nm">${r.name}</div>
+      <div class="sb">${rigRate(r)}</div>
+    </button>`).join("");
+  const cars = S.cars.map(c => `
+    <button class="slot" onclick="openCar('${c.id}')">
+      <div class="em">🚗</div>
+      <div class="nm">${CARS[c.mi].name}</div>
+      <div class="sb">${fmt(carValue(c))}</div>
+    </button>`).join("");
+  document.getElementById("cars").innerHTML = cars + rigs;
+  document.getElementById("emptyG").style.display = (S.cars.length || S.rigs.length) ? "none" : "block";
+}
+function openCar(id){ openCarId = id; openRigId = null; render(); }
+function openRig(i){ openRigId = S.rigs[i] ? S.rigs[i].id : null; openCarId = null; render(); }
+function closeSheet(){ openCarId = null; openRigId = null; render(); }
+
+function renderSheet(){
+  const bg = document.getElementById("carSheetBg");
+  const sheet = document.getElementById("carSheet");
+  if (openRigId){
+    const r = S.rigs.find(x=>x.id===openRigId);
+    if (!r){ openRigId=null; bg.classList.remove("show"); return; }
+    const status = S.mining ? "Работает"
+      : (S.bill >= BILL_LIMIT ? "Остановлен: не оплачен счёт" : "Остановлен");
+    sheet.innerHTML = `
+      <button class="x" onclick="closeSheet()">✕</button>
+      <div class="big">⛏️</div>
+      <div class="p">${r.name}</div>
+      <div class="kv"><span>Мощность</span><span>${r.power}</span></div>
+      <div class="kv"><span>Добыча</span><span>${rigRate(r)}</span></div>
+      <div class="kv"><span>Электричество, всего</span><span>${elecText()}</span></div>
+      <div class="kv"><span>Статус</span><span>${status}</span></div>
+      <div class="kv"><span>Всего добыто ригами</span><span>${S.minedTotal.toFixed(2)} ${COIN}</span></div>
+      <button class="primary" style="width:100%;margin-top:12px" onclick="toggleMode(${S.rigs.indexOf(r)})">Майнить ${r.mode==="btc"?"AVC":"BTC"}</button>
+      <button class="sell" style="margin-top:8px" onclick="sellRig(${S.rigs.indexOf(r)})">Продать за ${fmt(rigSellPrice(r))}</button>`;
+    bg.classList.add("show");
+    return;
+  }
+  const c = S.cars.find(x=>x.id===openCarId);
+  if (!c){ bg.classList.remove("show"); return; }
+  const v = carValue(c), sp = sellPrice(c);
+  const parts = Object.keys(PARTS).map(cat => {
+    const inst = c.parts[cat];
+    const owned = S.parts.filter(p=>p.cat===cat);
+    const opts = owned.map(p => `<button onclick="installPart('${c.id}','${p.id}')">Поставить ${TIER_NAMES[p.tier]}</button>`).join("");
+    const rm = inst!==undefined ? `<button onclick="removePart('${c.id}','${cat}')">Снять</button>` : "";
+    return `<div class="kv"><span>${PARTS[cat].name}</span><span>${inst!==undefined ? TIER_NAMES[inst] : "нет"}</span></div>
+      <div class="btns">${opts}${rm}</div>`;
+  }).join("");
+  sheet.innerHTML = `
+    <button class="x" onclick="closeSheet()">✕</button>
+    <div class="big">🚗</div>
+    <div class="p">${CARS[c.mi].name}</div>
+    <div class="kv"><span>Состояние</span><span>${Math.round(c.cond*100)}%</span></div>
+    <div class="kv"><span>Стоимость сейчас</span><span>${fmt(v)}</span></div>
+    <div class="kv"><span>Продажа</span><span>${fmt(sp)}</span></div>
+    <h4>Детали</h4>${parts}
+    <button class="sell" style="margin-top:10px" onclick="sellCar('${c.id}')">Продать за ${fmt(sp)}</button>`;
+  bg.classList.add("show");
+}
+
+/* ===== ТЕЛЕФОН ===== */
+function shopHTML(){
+  const app = S.adminOwned
+    ? '<span class="tag-ok">✓ куплено</span>'
+    : `<button class="primary" ${S.money<ADMIN_APP_PRICE?"disabled":""} onclick="buyAdminApp()">${fmt(ADMIN_APP_PRICE)}</button>`;
+  const key = S.adminKey
+    ? '<span class="tag-ok">✓ куплен</span>'
+    : `<button class="primary" ${S.money<ADMIN_KEY_PRICE?"disabled":""} onclick="buyAdminKey()">${fmt(ADMIN_KEY_PRICE)}</button>`;
+  return backHead("Магазин")
+    + `<div class="sub">Приложения</div>`
+    + `<div class="item"><div class="ico-s">🛠️</div>
+        <div class="grow"><b>Админка</b><div class="sub">Панель управления. Покупается один раз</div></div>${app}</div>`
+    + `<div class="sub">Ключи</div>`
+    + `<div class="item"><div class="ico-s">🔑</div>
+        <div class="grow"><b>Ключ от админки</b><div class="sub">${S.adminKey ? "Код: <b>"+S.adminKeyCode+"</b>" : "Код появится после покупки. Введи его внизу админки"}</div></div>${key}</div>`;
+}
+function buyAdminApp(){
+  if (S.adminOwned) return toast("Уже куплено.");
+  if (S.money < ADMIN_APP_PRICE) return toast("Не хватает денег.");
+  S.money -= ADMIN_APP_PRICE;
+  S.adminOwned = true;
+  toast("Приложение «Админка» установлено"); render();
+}
+function genKey(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let c = ""; for (let i=0;i<6;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return "KEY-" + c;
+}
+function buyAdminKey(){
+  if (S.adminKey) return toast("Ключ уже куплен.");
+  if (S.money < ADMIN_KEY_PRICE) return toast("Не хватает денег.");
+  S.money -= ADMIN_KEY_PRICE;
+  S.adminKey = true;
+  S.adminKeyCode = genKey();
+  S.keyVersion = GAME_VERSION;
+  toast("Ключ куплен. Теперь откроется админка"); render();
+}
+function openAdminApp(){ openAdmin(); }
+function openPhone(){ phoneOpen = true; render(); }
+function closePhone(){ phoneOpen = false; render(); }
+function openApp(name){ app = name; render(); }
+function closeApp(){ app = null; render(); }
+
+const backHead = title => `<div class="ahead"><button class="ghost" onclick="closeApp()">← Назад</button><b>${title}</b><span class="bal live-money">${fmt(S.money)}</span></div>`;
+
+function miningHTML(){
+  const owned = S.rigs.length ? S.rigs.map((r,i) => `
+    <div class="item"><div class="ico-s">⛏️</div>
+      <div class="grow"><b>${r.name}</b><div class="sub">Мощность ${r.power} · ${rigRate(r)}</div></div>
+      <div class="btns" style="margin:0;flex-direction:column;align-items:flex-end">
+        <button onclick="toggleMode(${i})">${r.mode==="btc"?"Майнит BTC":"Майнит AVC"}</button>
+        <button class="sell" onclick="sellRig(${i})">Продать за ${fmt(rigSellPrice(r))}</button>
+      </div></div>`).join("")
+    : `<div class="empty">Рига пока нет. Купи ниже.</div>`;
+  const rigs = RIGS.map((r,i) => `
+    <div class="item"><div class="ico-s">⛏️</div>
+      <div class="grow"><b>${r.name}</b><div class="sub">Мощность ${r.power}</div></div>
+      <button class="primary" ${S.money<r.price?"disabled":""} onclick="buyRig(${i})">${fmt(r.price)}</button></div>`).join("");
+  return backHead("Майнинг")
+    + `<div class="sub">Статус: <span class="live-status">${S.mining?"работают":"остановлены"}</span> · Потребление: ${consumption()}</div>`
+    + `<div class="sub">Майнинг BTC списывает ${fmt(BTC_COST_PER_SEC)} в секунду с баланса. Без денег BTC-риг стоит.</div>`
+    + `<div class="sub">Твои риги</div>` + owned
+    + `<div class="sub">Купить риг</div>` + rigs
+    + `<div class="sub">Кошелёк AVC</div>
+    <div class="wallet">
+      <div class="big-n"><span class="live-coins">${S.coins.toFixed(2)}</span> ${COIN}</div>
+      <div class="sub">Курс: <span class="live-price">${fmt(S.coinPrice)}</span> за 1 ${COIN}</div>
+      <div class="btns"><button onclick="sellCoins(1)">Продать 1</button><button onclick="sellCoins(0)">Продать всё</button></div>
+    </div>
+    <div class="sub">Кошелёк BTC</div>
+    <div class="wallet">
+      <div class="big-n"><span class="live-btc">${S.btc.toFixed(6)}</span> BTC</div>
+      <div class="sub">Курс: <span class="live-btcp">${fmt(S.btcPrice)}</span> за 1 BTC</div>
+      <div class="btns"><button onclick="sellBtc(0.001)">Продать 0.001</button><button onclick="sellBtc(0)">Продать всё</button></div>
+    </div>`;
+}
+
+function windHTML(){
+  const items = WIND.map((w,i) => {
+    const n = S.windmills.filter(x=>x===i).length;
+    return `<div class="item"><div class="ico-s">🌬️</div>
+      <div class="grow"><b>${w.name}</b><div class="sub">Покрывает ${w.cover} мощности · Установлено: ${n}</div></div>
+      <div class="btns" style="margin:0;flex-direction:column;align-items:flex-end">
+        <button class="primary" ${S.money<w.price?"disabled":""} onclick="buyWind(${i})">${fmt(w.price)}</button>
+        ${n>0 ? `<button class="sell" onclick="sellWind(${i})">Продать за ${fmt(Math.round(w.price*WIND_SELL_RATE))}</button>` : ""}
+      </div></div>`;
+  }).join("");
+  return backHead("Ветряк")
+    + `<div class="sub">Покрыто ветряками: ${windCover()} из ${consumption()} мощности</div>`
+    + items
+    + `<div class="sub">Всё, что ветряки не покрыли, платится в «Счёт».</div>`;
+}
+
+function billHTML(){
+  return backHead("Счёт") + `
+    <div class="wallet">
+      <div class="kv"><span>Электричество</span><span class="live-elec">${elecText()}</span></div>
+      <div class="kv"><span>Аренда гаража</span><span>${fmt(GARAGE_RENT)}/с</span></div>
+      <div class="kv"><span>Всего начисляется</span><span class="live-rate">${fmt(billRate())}/с</span></div>
+      <div class="kv"><span>Счёт к оплате</span><span class="live-bill">${fmt(S.bill)}</span></div>
+      <div class="btns"><button onclick="payBill(0)">Оплатить всё</button><button onclick="payBill(1000)">Оплатить 1 000</button></div>
+      <div class="sub">Если счёт больше ${fmt(BILL_LIMIT)}, риги останавливаются, пока не оплатишь.</div>
+    </div>`;
+}
+
+function renderPhone(){
+  document.getElementById("phone").classList.toggle("show", phoneOpen);
+  if (!phoneOpen) return;
+  document.getElementById("ptime").textContent = new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("pmoney").textContent = fmt(S.money);
+  const scr = document.getElementById("pscreen");
+  if (!app){
+    scr.className = "screen home";
+    scr.innerHTML = `<div class="grid-apps">
+      <button class="app" onclick="openApp('mining')"><span class="ico">⛏️</span><span>Майнинг</span></button>
+      <button class="app" onclick="openApp('wind')"><span class="ico">🌬️</span><span>Ветряк</span></button>
+      <button class="app" onclick="openApp('bill')"><span class="ico">🧾</span><span>Счёт</span></button>
+      <button class="app" onclick="openApp('shop')"><span class="ico">🛒</span><span>Магазин</span></button>
+      <button class="app" onclick="openAviroApp()"><span class="ico">🛍️</span><span>Aviro</span></button>
+      ${S.adminOwned ? `<button class="app" onclick="openAdminApp()"><span class="ico">🛠️</span><span>Админка</span></button>` : ""}
+    </div>`;
+    return;
+  }
+  scr.className = "screen";
+  scr.innerHTML = app==="mining" ? miningHTML() : app==="wind" ? windHTML() : app==="shop" ? shopHTML() : billHTML();
+}
+
+/* Лёгкое обновление цифр каждую секунду, без перерисовки карточек */
+function updateLive(){
+  document.getElementById("money").textContent = fmt(S.money);
+  document.getElementById("quest").innerHTML = questHTML();
+  document.querySelectorAll(".live-money").forEach(el => el.textContent = fmt(S.money));
+  document.querySelectorAll(".live-coins").forEach(el => el.textContent = S.coins.toFixed(2));
+  document.querySelectorAll(".live-price").forEach(el => el.textContent = fmt(S.coinPrice));
+  document.querySelectorAll(".live-bill").forEach(el => el.textContent = fmt(S.bill));
+  document.querySelectorAll(".live-rate").forEach(el => el.textContent = fmt(billRate())+"/с");
+  document.querySelectorAll(".live-elec").forEach(el => el.textContent = elecText());
+  document.querySelectorAll(".live-btc").forEach(el => el.textContent = S.btc.toFixed(6));
+  document.querySelectorAll(".live-btcp").forEach(el => el.textContent = fmt(S.btcPrice));
+  document.querySelectorAll(".live-status").forEach(el => el.textContent = S.mining ? "работают" : "остановлены");
+  if (openRigId) renderSheet();
+}
+
+/* ===== ОБЩИЙ РЕНДЕР ===== */
+function render(){
+  renderGarage(); renderSheet(); renderPhone(); save();
+}
+function toast(t){
+  let n = document.getElementById("toast");
+  if (!n){ n = document.createElement("div"); n.id="toast"; n.className="toast"; document.body.appendChild(n); }
+  n.textContent = t;
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>{ const x=document.getElementById("toast"); if(x) x.remove(); }, 2400);
+}
+
+/* ===== СОХРАНЕНИЕ ===== */
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (!d || typeof d.money!=="number" || !Array.isArray(d.cars)) return false;
+    d.cars = d.cars.filter(c => c && CARS[c.mi]);
+    d.parts = Array.isArray(d.parts) ? d.parts : [];
+    d.rigs = Array.isArray(d.rigs) ? d.rigs.filter(r => r && typeof r.power==="number") : [];
+    d.carShop = Array.isArray(d.carShop) ? d.carShop : makeCarListings();
+    d.partShop = Array.isArray(d.partShop) ? d.partShop : makePartListings();
+    d.coins = typeof d.coins==="number" ? d.coins : 0;
+    d.minedTotal = typeof d.minedTotal==="number" ? d.minedTotal : 0;
+    d.coinPrice = typeof d.coinPrice==="number" ? d.coinPrice : 5000;
+    d.ch2Done = !!d.ch2Done;
+    d.bill = typeof d.bill==="number" ? d.bill : 0;
+    d.btc = typeof d.btc==="number" ? d.btc : 0;
+    d.btcPrice = typeof d.btcPrice==="number" ? d.btcPrice : 5000000;
+    d.rigs.forEach(r => { r.mode = r.mode==="btc" ? "btc" : "avc"; });
+    d.windmills = Array.isArray(d.windmills) ? d.windmills.filter(i => WIND[i]) : [];
+    d.adminOwned = !!d.adminOwned;
+    d.adminKey = !!d.adminKey;
+    d.adminSaved = !!d.adminSaved;
+    // в новой версии игры купленный ключ становится другим, старый код больше не работает
+    if (d.adminKey && d.keyVersion !== GAME_VERSION){
+      d.adminKeyCode = genKey();
+      d.keyVersion = GAME_VERSION;
+      d.adminSaved = false;
+    }
+    d.makUsed = !!d.makUsed;
+    d.usedKeys = Array.isArray(d.usedKeys) ? d.usedKeys : [];
+    d.adminSuper = !!d.adminSuper;
+    d.cfgOnly = !!d.cfgOnly;
+    d.cfg = (d.cfg && typeof d.cfg==='object') ? d.cfg : {};
+    d.adminKeyCode = typeof d.adminKeyCode==='string' ? d.adminKeyCode : (d.adminKey ? genKey() : null);
+    S = d; return true;
+  }catch(e){ return false; }
+}
+function newGame(){
+  S = { money:START_MONEY, cars:[], parts:[], rigs:[], carShop:makeCarListings(), partShop:makePartListings(),
+        coins:0, btc:0, btcPrice:5000000, minedTotal:0, coinPrice:5000, ch2Done:false, mining:false,
+        introDone:false, bill:0, windmills:[], adminOwned:false, adminKey:false, adminKeyCode:null, adminSaved:false, makUsed:false, usedKeys:[], adminSuper:false, cfgOnly:false, cfg:{} };
+}
+
+/* ===== АДМИНКА ===== */
+const ADMIN_CODE = "maks";           // одноразовый код
+const REUSABLE_KEY = "idi_naxyu";    // многоразовый ключ: работает каждый раз
+const ONE_TIME_KEYS = ["ODIN-7K2P", "ODIN-9QXM", "ODIN-4RTW", "ODIN-B8LZ", "ODIN-H3NV"];  // одноразовые: каждый работает один раз
+const SUPER_KEY = "UNIKUM-7Q9X";   // уникальный ключ: расширенная админка (суммы, без настроек), работает много раз
+const SETTINGS_KEY = "1_2_настройка_игры";   // ключ: открывает только настройки игры, без админки
+let adminUnlocked = false;   // открыта ли панель в этом открытии
+function titleTap(){
+  titleTaps++; clearTimeout(titleTimer);
+  titleTimer = setTimeout(()=>{ titleTaps=0; }, 1500);
+  if (titleTaps>=5){ titleTaps=0; openCodeModal(); }
+}
+function openCodeModal(){
+  if (document.getElementById("codeModal") || document.getElementById("admin")) return;
+  const d = document.createElement("div");
+  d.id="codeModal"; d.className="modal";
+  d.innerHTML = `<div class="mbox">
+    <div style="font-weight:800;font-size:18px;margin-bottom:8px">Вход в админку</div>
+    <input id="a-code" type="password" placeholder="Код" style="width:100%;padding:10px;border:1px solid #e4e6eb;border-radius:8px;font:inherit">
+    <div class="btns" style="margin-top:10px"><button class="primary" onclick="checkCode()">Войти</button><button onclick="closeCodeModal()">Отмена</button></div>
+  </div>`;
+  d.addEventListener("click", e=>{ if(e.target===d) closeCodeModal(); });
+  document.body.appendChild(d);
+  setTimeout(()=>{ const el=document.getElementById("a-code"); if(el) el.focus(); }, 50);
+}
+function closeCodeModal(){ const d=document.getElementById("codeModal"); if(d) d.remove(); }
+function checkCode(){
+  const v = (document.getElementById("a-code").value || "").trim().toUpperCase();
+  closeCodeModal();
+  if (v === ADMIN_CODE.toUpperCase()){
+    if (S.makUsed) return toast("Код maks уже использован");
+    S.makUsed = true; S.adminSaved = true; save();
+    adminUnlocked = true; openAdmin();
+  }
+  else toast("Неверный код");
+}
+function openAdmin(){
+  if (document.getElementById("admin")) return;
+  if (S.adminSaved) adminUnlocked = true;
+  const d = document.createElement("div");
+  d.id="admin"; d.className="modal";
+  d.innerHTML = `<div class="mbox" id="adminBox" style="max-height:88vh;overflow-y:auto"></div>`;
+  d.addEventListener("click", e=>{ if(e.target===d) closeAdmin(); });
+  document.body.appendChild(d);
+  renderAdmin();
+}
+function adminControls(){
+  return `
+    <div class="sub">Деньги</div>
+    <div class="btns"><button onclick="admMoney(1000000)">+1 000 000</button><button onclick="admMoney(100000)">+100 000</button><button onclick="admMoney(10000000)">+10 000 000</button></div>
+    <div class="sub">AVC</div>
+    <div class="btns"><button onclick="admCoins(10)">+10 AVC</button><button onclick="admCoins(100)">+100 AVC</button></div>
+    <div class="sub">BTC</div>
+    <div class="btns"><button onclick="admBtc(0.001)">+0.001 BTC</button><button onclick="admBtc(1)">+1 BTC</button></div>
+    <div class="sub">Ветряк</div>
+    <select id="a-wind">${WIND.map((w,i)=>`<option value="${i}">${w.name}</option>`).join("")}</select>
+    <div class="btns"><button onclick="admWind()">Добавить ветряк</button></div>
+    <div class="sub">Риг</div>
+    <select id="a-rig">${RIGS.map((r,i)=>`<option value="${i}">${r.name}</option>`).join("")}</select>
+    <div class="btns"><button onclick="admRig()">Добавить риг</button></div>`
+    + (S.adminSuper ? superControls() : "");
+}
+function superControls(){
+  return `
+    <div class="sub" style="margin-top:16px;color:#8a1f1f"><b>Расширенная админка</b></div>
+    <div class="sub">Любая сумма</div>
+    <input id="a-cmoney" type="number" placeholder="Сумма ₽" style="width:100%;padding:9px;border:1px solid #e4e6eb;border-radius:8px;font:inherit">
+    <div class="btns"><button onclick="admCustomMoney()">Добавить деньги</button></div>
+    <input id="a-ccoins" type="number" placeholder="Количество AVC" style="width:100%;padding:9px;border:1px solid #e4e6eb;border-radius:8px;font:inherit">
+    <div class="btns"><button onclick="admCustomCoins()">Добавить AVC</button></div>
+    <input id="a-cbtc" type="number" placeholder="Количество BTC" style="width:100%;padding:9px;border:1px solid #e4e6eb;border-radius:8px;font:inherit">
+    <div class="btns"><button onclick="admCustomBtc()">Добавить BTC</button></div>
+    `;
+}
+function admCustomMoney(){ const n = Math.round(+document.getElementById("a-cmoney").value); if (!n) return; S.money += n; render(); renderAdmin(); }
+function admCustomCoins(){ const n = +document.getElementById("a-ccoins").value; if (!n) return; S.coins += n; render(); renderAdmin(); }
+function admCustomBtc(){ const n = +document.getElementById("a-cbtc").value; if (!n) return; S.btc += n; render(); renderAdmin(); }
+function settingsControls(){
+  const rows = CFG_FIELDS.map(([name,label]) => `
+    <div class="sub">${label}</div>
+    <div class="btns" style="margin:0 0 6px">
+      <input id="cfg-${name}" type="number" step="any" value="${cfgValue(name)}" style="flex:2;padding:8px;border:1px solid #e4e6eb;border-radius:8px;font:inherit;min-width:0">
+      <button onclick="saveCfg('${name}')">Сохранить</button>
+    </div>`).join("");
+  return `<div class="sub" style="margin-top:16px;color:#8a1f1f"><b>Настройки игры</b></div>` + rows
+    + `<div class="btns" style="margin-top:8px"><button onclick="resetCfg()">Вернуть как было</button></div>`;
+}
+function saveCfg(name){
+  const v = parseFloat(document.getElementById("cfg-"+name).value);
+  if (isNaN(v) || v < 0) return toast("Введи число не меньше 0");
+  setCfg(name, v);
+  S.cfg = S.cfg || {}; S.cfg[name] = v;
+  render(); renderAdmin(); toast("Сохранено");
+}
+function resetCfg(){
+  CFG_FIELDS.forEach(([name]) => setCfg(name, CFG_DEFAULTS[name]));
+  S.cfg = {};
+  render(); renderAdmin(); toast("Настройки возвращены");
+}
+
+function renderAdmin(){
+  const box = document.getElementById("adminBox"); if(!box) return;
+  const title = `<div style="font-weight:800;font-size:18px">Админка</div>`;
+  const main = adminUnlocked
+    ? (S.cfgOnly ? settingsControls() : adminControls())
+    : `<div class="sub" style="margin:16px 0">Панель заблокирована. Введи ключ внизу.</div>`;
+  const bottom = adminUnlocked
+    ? `<div class="btns" style="margin-top:14px"><button onclick="admLogout()">Выйти из админки</button><button onclick="admReset()">Начать заново</button><button onclick="closeAdmin()">Закрыть</button></div>`
+    : `<div class="sub" style="margin-top:14px">Ключ</div>
+       <input id="a-key" placeholder="KEY-XXXXXX" autocomplete="off" style="width:100%;padding:10px;border:1px solid #e4e6eb;border-radius:8px;font:inherit">
+       <div class="btns" style="margin-top:8px"><button class="primary" onclick="tryKey()">Открыть</button><button onclick="closeAdmin()">Закрыть</button></div>`;
+  box.innerHTML = title + main + bottom;
+}
+function tryKey(){
+  const v = (document.getElementById("a-key").value || "").trim().toUpperCase();
+  if (v === SETTINGS_KEY.toUpperCase()){
+    S.cfgOnly = true;                       // только настройки игры
+  } else if (v === REUSABLE_KEY.toUpperCase()){
+    S.cfgOnly = false;                      // многоразовый: полная админка
+  } else if (v === ADMIN_CODE.toUpperCase()){
+    if (S.makUsed) return toast("Код maks уже использован");
+    S.makUsed = true; S.cfgOnly = false;    // одноразовый
+  } else if (v === SUPER_KEY){
+    S.adminSuper = true; S.cfgOnly = false; // расширенная админка (суммы)
+  } else if (ONE_TIME_KEYS.includes(v)){
+    if (S.usedKeys.includes(v)) return toast("Этот ключ уже использован");
+    S.usedKeys.push(v); S.cfgOnly = false;  // одноразовый
+  } else if (S.adminKeyCode && v === S.adminKeyCode){
+    S.cfgOnly = false;                      // купленный ключ
+  } else {
+    return toast("Неверный ключ");
+  }
+  S.adminSaved = true;                      // вход сохраняется
+  save();
+  adminUnlocked = true; renderAdmin(); toast("Открыто");
+}
+// Полный выход: панель закрывается и при следующем открытии снова просит ключ.
+// Использованные одноразовые ключи и купленный ключ при этом не сбрасываются.
+function admLogout(){
+  S.adminSaved = false;
+  S.adminSuper = false;
+  S.cfgOnly = false;
+  save();
+  closeAdmin();
+  toast("Вы вышли из админки");
+}
+function closeAdmin(){ const a=document.getElementById("admin"); if(a) a.remove(); adminUnlocked = false; }
+function admMoney(n){ S.money += n; render(); renderAdmin(); }
+function admCoins(n){ S.coins += n; render(); renderAdmin(); }
+function admBtc(n){ S.btc += n; render(); renderAdmin(); }
+function admWind(){
+  const i = +document.getElementById("a-wind").value;
+  S.windmills.push(i); render(); renderAdmin(); toast(`Добавлен ${WIND[i].name}`);
+}
+function admRig(){
+  const i = +document.getElementById("a-rig").value, r = RIGS[i];
+  S.rigs.push({ id:uid(), name:r.name, power:r.power, mode:"avc" }); render(); renderAdmin(); toast(`Добавлен ${r.name}`);
+}
+function admReset(){ const used = S.makUsed, usedKeys = S.usedKeys, cfg = S.cfg; closeAdmin(); newGame(); S.makUsed = used; S.usedKeys = usedKeys; S.cfg = cfg; render(); playIntro(); }
+
+/* ===== ВСТУПИТЕЛЬНАЯ СЦЕНА (нельзя пропустить) ===== */
+async function playIntro(){
+  const cut = document.createElement("div");
+  cut.className = "cut";
+  cut.innerHTML = `<div class="scene"></div><div class="cap"></div>`;
+  document.body.appendChild(cut);
+  const scene = cut.querySelector(".scene"), cap = cut.querySelector(".cap");
+  const say = async (t,ms) => { cap.classList.remove("show"); await wait(300); cap.textContent=t; cap.classList.add("show"); await wait(ms); };
+
+  scene.className = "scene garage-cut";
+  scene.innerHTML = `<div class="lamp"></div>`;
+  await say("Тебе выдали 250 000 ₽ на старт. Здесь твой гараж, пора заняться майнингом.", 3500);
+
+  cut.classList.add("out");
+  await wait(1200);
+  cut.remove();
+}
+
+// Приложение Aviro: торговля телефонами, открывается на весь экран поверх телефона
+const TRADE_HTML = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>Aviro: скупка и продажа телефонов<\/title>\n<style>\n  :root { --bg:#f3f4f6; --card:#fff; --text:#1f1f1f; --muted:#7b7f87; --line:#e4e6eb; --blue:#00aaff; --blue-d:#0088cc; --green:#1a9e4b; --red:#e5484d; --padb: env(safe-area-inset-bottom, 0px); }\n  * { box-sizing: border-box; }\n  html, body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system, system-ui, \"Segoe UI\", Roboto, sans-serif; font-size:15px; }\n  body { padding-bottom: calc(64px + var(--padb)); min-height:100vh; }\n  button { font:inherit; cursor:pointer; border:none; border-radius:8px; padding:10px 14px; background:#eef0f3; color:var(--text); }\n  button:disabled { opacity:.4; cursor:not-allowed; }\n  button.primary { background:var(--blue); color:#fff; font-weight:600; }\n  button.primary:hover:not(:disabled) { background:var(--blue-d); }\n  button.ghost { background:transparent; color:var(--blue); font-weight:600; padding:10px 6px; }\n  button:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }\n\n  header { position:sticky; top:0; z-index:5; background:#fff; padding:env(safe-area-inset-top,0px) 12px 10px; border-bottom:1px solid var(--line); }\n  .head-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:10px; }\n  .logo { font-weight:800; font-size:20px; color:var(--blue); letter-spacing:-.3px; }\n  .balance { font-size:14px; text-align:right; line-height:1.2; }\n  .balance b { display:block; font-size:16px; }\n  .search { margin-top:6px; display:flex; background:#f0f2f5; border-radius:8px; padding:0 10px; align-items:center; }\n  .search input { flex:1; border:none; background:transparent; padding:5px 4px; font:inherit; font-size:13px; outline:none; min-width:0; }\n  .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 12px 0; scrollbar-width:none; }\n  .chips::-webkit-scrollbar { display:none; }\n  .chip { flex:0 0 auto; border:1px solid var(--line); background:#fff; color:var(--text); padding:6px 12px; border-radius:16px; font-size:14px; }\n  .chip.on { background:var(--text); color:#fff; border-color:var(--text); }\n\n  main { padding:12px; }\n  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }\n  .ad { background:var(--card); border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.05); text-align:left; padding:0; color:inherit; display:flex; flex-direction:column; }\n  .ad:hover { box-shadow:0 2px 8px rgba(0,0,0,.1); }\n  .pic { aspect-ratio:1/1; background:#f7f8fa; display:flex; align-items:center; justify-content:center; font-size:58px; position:relative; }\n  .tag { position:absolute; left:6px; top:6px; background:rgba(0,0,0,.6); color:#fff; font-size:11px; padding:3px 6px; border-radius:6px; }\n  .info { padding:8px 10px 10px; }\n  .price { font-size:16px; font-weight:700; }\n  .title { font-size:14px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n  .sub { font-size:12px; color:var(--muted); margin-top:3px; }\n  .section-title { font-size:17px; font-weight:700; margin:6px 0 10px; }\n  .empty { text-align:center; color:var(--muted); padding:30px 10px; }\n\n  .row-item { background:#fff; border-radius:12px; padding:12px; display:flex; gap:12px; align-items:center; margin-bottom:10px; cursor:pointer; }\n  .row-item .pic { width:84px; height:84px; aspect-ratio:auto; font-size:38px; border-radius:10px; flex:0 0 auto; }\n  .row-item .grow { flex:1; min-width:0; }\n\n  .stat { background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; }\n  .stat .k { color:var(--muted); font-size:13px; }\n  .stat .v { font-size:20px; font-weight:700; margin-top:2px; }\n  .news { background:#fff8e1; border-radius:10px; padding:12px; margin:10px 0; font-size:14px; }\n  .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px; }\n  .bar > div { height:100%; background:var(--green); transition:width .4s; }\n\n  nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line); display:flex; padding-bottom:var(--padb); z-index:6; }\n  nav button { flex:1; background:none; border-radius:0; padding:8px 4px 10px; color:var(--muted); font-size:12px; display:flex; flex-direction:column; align-items:center; gap:2px; }\n  nav button .ic { font-size:20px; }\n  nav button.on { color:var(--blue); font-weight:600; }\n\n  .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:10; display:flex; align-items:flex-end; justify-content:center; }\n  .sheet { background:#fff; width:100%; max-width:560px; max-height:88vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:0 0 calc(16px + var(--padb)); }\n  .sheet .big { height:220px; display:flex; align-items:center; justify-content:center; font-size:120px; background:#f7f8fa; position:relative; }\n  .sheet .body { padding:14px 16px; }\n  .sheet .p { font-size:24px; font-weight:800; }\n  .sheet .t { font-size:17px; margin-top:4px; }\n  .sheet .d { color:var(--muted); font-size:14px; line-height:1.5; margin:12px 0; }\n  .sheet .close { position:absolute; top:10px; right:10px; background:#fff; width:36px; height:36px; padding:0; border-radius:50%; font-size:18px; }\n  .sheet .btns { display:flex; gap:8px; margin-top:12px; }\n  .sheet .btns button { flex:1; padding:13px; }\n  .kv { display:flex; justify-content:space-between; font-size:14px; padding:6px 0; border-bottom:1px solid var(--line); }\n  .kv span:first-child { color:var(--muted); }\n  .toast { position:fixed; left:12px; right:12px; bottom:calc(74px + var(--padb)); background:#1f1f1f; color:#fff; padding:12px 14px; border-radius:10px; font-size:14px; z-index:20; }\n  .end { text-align:center; padding:30px 10px; }\n  .end h2 { font-size:22px; margin:0 0 10px; }\n  .end p { color:var(--muted); line-height:1.5; }\n  .seg { display:flex; gap:6px; margin-top:10px; background:#f0f2f5; border-radius:10px; padding:3px; }\n  .seg button { flex:1; background:transparent; padding:8px; font-weight:600; color:var(--muted); }\n  .seg button.on { background:#fff; color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.12); }\n  .pic svg { width:74%; height:74%; }\n  .big svg { width:180px; height:180px; }\n\n  .cut { position:fixed; inset:0; z-index:100; background:#0b0d12; color:#fff; overflow:hidden; touch-action:none; user-select:none; transition:opacity 1.2s; }\n  .cut.out { opacity:0; }\n  .scene { position:absolute; inset:0; overflow:hidden; }\n  .scene .car { font-size:110px; line-height:1; }\n  .market { background:linear-gradient(#2b3340,#15181f); display:flex; align-items:center; justify-content:center; }\n  .market .sign { position:absolute; top:16%; width:100%; text-align:center; font-size:26px; font-weight:800; }\n  .stand { animation:bob 2s ease-in-out infinite; }\n  @keyframes bob { 50% { transform:translateY(-6px); } }\n  .road { background:#2a2d33; }\n  .road::after { content:\"\"; position:absolute; left:0; width:calc(100% + 80px); top:50%; height:6px; background:repeating-linear-gradient(90deg,#f5d000 0 40px,transparent 40px 80px); animation:lines .6s linear infinite; }\n  @keyframes lines { from { transform:translateX(0); } to { transform:translateX(-80px); } }\n  .drive-wrap { position:absolute; top:calc(50% - 90px); left:-160px; animation:drive 3s ease-in forwards; }\n  @keyframes drive { to { transform:translateX(calc(100vw + 320px)); } }\n  .garage { background:linear-gradient(#1a1d24,#0c0d10); }\n  .garage-door { position:absolute; left:50%; bottom:38%; transform:translateX(-50%); width:220px; height:150px; background:#3a3f4a; border-radius:6px 6px 0 0; }\n  .park-wrap { position:absolute; bottom:30%; left:50%; margin-left:-55px; animation:park 2.5s ease-out 0.5s forwards; opacity:1; }\n  @keyframes park { from { transform:translateX(-260px); } to { transform:translateX(0) scale(.5); opacity:0; } }\n  .cap { position:absolute; left:0; right:0; bottom:12%; text-align:center; padding:0 24px; font-size:18px; line-height:1.5; opacity:0; transition:opacity .3s; }\n  .cap.show { opacity:1; }\n  .adm select, .adm input[type=number] { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff; margin-bottom:8px; }\n  .adm .btns button { flex:1; }\n  /* ===== АДМИНКА ===== */\n  .modal { position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px; }\n  .mbox { background:#fff; color:var(--text); border-radius:14px; padding:16px; width:100%; max-width:380px; max-height:88vh; overflow-y:auto; }\n  .mbox .sub { font-size:13px; color:var(--muted); margin:12px 0 6px; }\n  .mbox .row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }\n  .mbox .row button { flex:1; font-size:13px; padding:9px 8px; }\n  .mbox input, .mbox select { width:100%; padding:9px; border:1px solid var(--line); border-radius:8px; font:inherit; margin-bottom:6px; background:#fff; }\n  .mbox .row input { flex:2; margin:0; min-width:0; }\n  .mbox .msg { color:#8a1f1f; font-size:13px; min-height:18px; margin-top:6px; }\n<\/style>\n<\/head>\n<body>\n\n<header>\n  <div class=\"head-row\">\n    <div class=\"logo\" onclick=\"logoTap()\">Aviro<\/div>\n    <div class=\"balance\">Баланс<b id=\"money\"><\/b><\/div>\n  <\/div>\n  <div class=\"search\"><input id=\"q\" placeholder=\"Поиск\" oninput=\"setQuery(this.value)\"><\/div>\n  <div class=\"chips\" id=\"chips\"><\/div>\n<\/header>\n\n<div id=\"chapter\"><\/div>\n<main id=\"main\"><\/main>\n\n<nav>\n  <button id=\"tab-shop\" onclick=\"setTab('shop')\"><span class=\"ic\">🛍️<\/span>Объявления<\/button>\n  <button id=\"tab-stock\" onclick=\"setTab('stock')\"><span class=\"ic\">📦<\/span>Склад<\/button>\n  <button id=\"tab-me\" onclick=\"setTab('me')\"><span class=\"ic\">👤<\/span>Кабинет<\/button>\n<\/nav>\n\n<div id=\"layer\"><\/div>\n\n<script>\nconst EMBEDDED = window.top !== window.self;   // открыта внутри другой игры\nconst MODELS = [\n  { brand:\"Xiaomi\", name:\"Xiaomi Redmi 9\", base:5000, emoji:\"📱\" },\n  { brand:\"Xiaomi\", name:\"Xiaomi Note 10\", base:9000, emoji:\"📱\" },\n  { brand:\"Samsung\", name:\"Samsung Galaxy S21\", base:18000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 12\", base:22000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 14 Pro\", base:65000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 7\", base:24000, emoji:\"📱\" },\n  { brand:\"Huawei\", name:\"Huawei Nova 9\", base:14000, emoji:\"📱\" },\n  { brand:\"Huawei\", name:\"Huawei P40\", base:16000, emoji:\"📱\" },\n  { brand:\"Honor\", name:\"Honor 50\", base:13000, emoji:\"📱\" },\n  { brand:\"Honor\", name:\"Honor Magic5 Pro\", base:45000, emoji:\"📱\" },\n  { brand:\"OnePlus\", name:\"OnePlus Nord CE 3\", base:15000, emoji:\"📱\" },\n  { brand:\"OnePlus\", name:\"OnePlus 9\", base:24000, emoji:\"📱\" },\n  { brand:\"Motorola\", name:\"Motorola Moto G54\", base:8000, emoji:\"📱\" },\n  { brand:\"Motorola\", name:\"Motorola Edge 40\", base:22000, emoji:\"📱\" },\n  { brand:\"Vivo\", name:\"Vivo Y21\", base:6000, emoji:\"📱\" },\n  { brand:\"Vivo\", name:\"Vivo V27\", base:17000, emoji:\"📱\" },\n  { brand:\"Tecno\", name:\"Tecno Spark 10\", base:5500, emoji:\"📱\" },\n  { brand:\"Tecno\", name:\"Tecno Camon 20\", base:9500, emoji:\"📱\" },\n  { brand:\"Infinix\", name:\"Infinix Hot 30\", base:6000, emoji:\"📱\" },\n  { brand:\"Infinix\", name:\"Infinix Note 30\", base:8500, emoji:\"📱\" },\n  { brand:\"Nokia\", name:\"Nokia G21\", base:6500, emoji:\"📱\" },\n  { brand:\"Nokia\", name:\"Nokia X30\", base:18000, emoji:\"📱\" },\n  { brand:\"Sony\", name:\"Sony Xperia 10 IV\", base:20000, emoji:\"📱\" },\n  { brand:\"Sony\", name:\"Sony Xperia 5 IV\", base:38000, emoji:\"📱\" },\n  { brand:\"ASUS\", name:\"ASUS Zenfone 9\", base:35000, emoji:\"📱\" },\n  { brand:\"ASUS\", name:\"ASUS ROG Phone 6\", base:50000, emoji:\"📱\" },\n  { brand:\"Nothing\", name:\"Nothing Phone (1)\", base:20000, emoji:\"📱\" },\n  { brand:\"Nothing\", name:\"Nothing Phone (2)\", base:32000, emoji:\"📱\" },\n  { brand:\"ZTE\", name:\"ZTE Blade V40\", base:7000, emoji:\"📱\" },\n  { brand:\"ZTE\", name:\"ZTE Axon 40\", base:20000, emoji:\"📱\" },\n  { cat:\"pc\", brand:\"Lenovo\", name:\"Lenovo ThinkPad T480\", base:18000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Lenovo\", name:\"Lenovo IdeaPad 3\", base:28000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"HP\", name:\"HP 250 G8\", base:20000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"HP\", name:\"HP Pavilion 15\", base:35000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Acer\", name:\"Acer Aspire 5\", base:30000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Acer\", name:\"Acer Nitro 5\", base:55000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Dell\", name:\"Dell Latitude 5490\", base:17000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Dell\", name:\"Dell Inspiron 15\", base:34000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Apple\", name:\"MacBook Air M1\", base:62000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Apple\", name:\"MacBook Pro 14 M2\", base:125000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"ASUS\", name:\"ASUS VivoBook 15\", base:32000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"ASUS\", name:\"ASUS TUF Gaming F15\", base:60000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"MSI\", name:\"MSI GF63 Thin\", base:55000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"MSI\", name:\"MSI Katana 15\", base:70000, emoji:\"💻\" },\n  { cat:\"pc\", brand:\"Сборка\", name:\"Офисный ПК (i3, 8 ГБ)\", base:15000, emoji:\"🖥️\" },\n  { cat:\"pc\", brand:\"Сборка\", name:\"Игровой ПК (GTX 1650)\", base:32000, emoji:\"🖥️\" },\n  { cat:\"pc\", brand:\"Сборка\", name:\"Игровой ПК (RTX 3060)\", base:70000, emoji:\"🖥️\" }\n,\n  { brand:\"Google\", name:\"Google Pixel 3a\", base:5500, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 4a\", base:8000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 5\", base:11000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 5a\", base:12000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 6\", base:15000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 6a\", base:14000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 6 Pro\", base:20000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 7a\", base:22000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 7 Pro\", base:30000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 8\", base:32000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 8 Pro\", base:45000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 9a\", base:35000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 9\", base:45000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 9 Pro\", base:60000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 9 Pro XL\", base:65000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel Fold\", base:70000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 9 Pro Fold\", base:90000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 10\", base:55000, emoji:\"📱\" },\n  { brand:\"Google\", name:\"Google Pixel 10 Pro\", base:75000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 6s\", base:4000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 7\", base:5000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 8\", base:7000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone SE (2020)\", base:9000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone X\", base:10000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone XR\", base:12000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone XS\", base:13000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 11\", base:16000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 11 Pro\", base:20000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 11 Pro Max\", base:24000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 12 mini\", base:18000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 12 Pro\", base:28000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 12 Pro Max\", base:32000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 13 mini\", base:27000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 13\", base:30000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 13 Pro\", base:40000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 13 Pro Max\", base:45000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone SE (2022)\", base:15000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 14\", base:45000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 14 Plus\", base:50000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 14 Pro Max\", base:75000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 15\", base:60000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 15 Plus\", base:65000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 15 Pro\", base:85000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 15 Pro Max\", base:95000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 16\", base:75000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 16 Pro\", base:100000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 17\", base:85000, emoji:\"📱\" },\n  { brand:\"Apple\", name:\"iPhone 17 Pro\", base:120000, emoji:\"📱\" }\n,\n  { cat:\"con\", brand:\"Sony\", name:\"PlayStation 5\", base:42000, emoji:\"🎮\", alt:\"пс5 пс 5 ps5 ps 5 плейстейшн\" },\n  { cat:\"con\", brand:\"Sony\", name:\"PlayStation 4\", base:13000, emoji:\"🎮\", alt:\"пс4 пс 4 ps4 ps 4 плейстейшн\" },\n  { cat:\"con\", brand:\"Sony\", name:\"PlayStation 3\", base:5000, emoji:\"🎮\", alt:\"пс3 пс 3 ps3 ps 3 плейстейшн\" },\n  { cat:\"con\", brand:\"Microsoft\", name:\"Xbox 360\", base:4500, emoji:\"🎮\", alt:\"иксбокс икс бокс хбокс 360\" },\n  { cat:\"con\", brand:\"Valve\", name:\"Steam Deck\", base:38000, emoji:\"🎮\", alt:\"стим дек стим дэк стимдек валв\" }\n];\nconst isPC=m=>m.cat===\"pc\";\nconst isCon=m=>m.cat===\"con\";\nconst kind=m=>m.cat||\"phone\";\nconst brandsFor=c=>[...new Set(MODELS.filter(m=>isPC(m)===(c===\"pc\")).map(m=>m.brand))];\nconst PC_LABELS={ good:\"Отличное\", scratch:\"Потёртости\", screen:\"Перегревается\", dead:\"Не включается\" };\nconst condLabel=(mi,c)=>(isPC(MODELS[mi])||isCon(MODELS[mi]))?PC_LABELS[c]:CONDS[c].label;\nconst hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);\nconst PAL={Apple:[\"#d8d3ca\",\"#2d3138\",\"#c9d3e3\",\"#e9d3d8\"],Google:[\"#2f3436\",\"#e8e4dd\",\"#9bb7a9\",\"#a9b7d8\"],Samsung:[\"#2a2c33\",\"#b9a7d9\",\"#cfe3d4\"],Xiaomi:[\"#1f2326\",\"#3a6fc4\",\"#d9d3c3\"],Huawei:[\"#1d1f26\",\"#c63b3b\",\"#3b7fb8\"],Honor:[\"#7aa6d8\",\"#1c2330\",\"#f0ece4\"],OnePlus:[\"#1b1d1f\",\"#2f7b5b\",\"#a02f3a\"],Motorola:[\"#2c3550\",\"#a74a8a\",\"#1e1e1e\"],Vivo:[\"#3b5fc4\",\"#1f2430\",\"#c9c6f0\"],Tecno:[\"#1d2330\",\"#3a8f6b\",\"#cfa63a\"],Infinix:[\"#26272b\",\"#2f9c8a\",\"#d04a6a\"],Nokia:[\"#33505f\",\"#1d1f22\",\"#cfd4d8\"],Sony:[\"#16171a\",\"#7a5aa8\",\"#2f4f9c\"],ASUS:[\"#14151a\",\"#2a2f3a\",\"#e8e8ee\"],Nothing:[\"#f1f1ee\",\"#e4e4e0\"],ZTE:[\"#1f2a44\",\"#3a3a3a\",\"#2d6f8a\"]};\nconst ln=(x,y,r)=>`<circle cx=\"${x}\" cy=\"${y}\" r=\"${r}\" fill=\"#0c0c0e\"/><circle cx=\"${x}\" cy=\"${y}\" r=\"${r*.55}\" fill=\"#33466a\"/><circle cx=\"${x-r*.25}\" cy=\"${y-r*.25}\" r=\"${r*.2}\" fill=\"#9dbcff\"/>`;\nconst mod=(x,y,w,h,r)=>`<rect x=\"${x}\" y=\"${y}\" width=\"${w}\" height=\"${h}\" rx=\"${r}\" fill=\"rgba(0,0,0,.35)\" stroke=\"rgba(255,255,255,.25)\" stroke-width=\".8\"/>`;\nconst ring=(px,py,rr,k)=>`<circle cx=\"${px}\" cy=\"${py}\" r=\"${rr}\" fill=\"rgba(0,0,0,.35)\" stroke=\"rgba(255,255,255,.25)\" stroke-width=\".8\"/>`+(k>2?[[0,-6.5],[-5.6,3.2],[5.6,3.2]]:[[-4.5,0],[4.5,0]]).map(d=>ln(px+d[0],py+d[1],4)).join(\"\");\nconst fx=(c,x,y,w,h)=>c===\"screen\"?`<path d=\"M${x+w*.3} ${y+h*.1}L${x+w*.5} ${y+h*.4}L${x+w*.4} ${y+h*.55}L${x+w*.7} ${y+h*.9}M${x+w*.5} ${y+h*.4}L${x+w*.8} ${y+h*.45}\" stroke=\"#fff\" stroke-width=\"1.2\" fill=\"none\" opacity=\".9\"/>`:c===\"scratch\"?`<path d=\"M${x+w*.2} ${y+h*.7}l${w*.3} -${h*.12}M${x+w*.45} ${y+h*.8}l${w*.3} -${h*.1}\" stroke=\"#fff\" opacity=\".6\" stroke-width=\".9\"/>`:\"\";\nfunction phoneArt(m,cond){\n  const n=m.name,b=m.brand,pro=/Pro|Ultra|Magic|Note|Edge|Fold/.test(n);\n  const pal=PAL[b]||[\"#2a2c33\"], c=pal[hash(n)%pal.length];\n  let x=27,y=6,w=46,h=88,r=8;\n  if(b===\"Sony\"){x=31;w=38;r=4;}\n  const fold=/Fold/.test(n); if(fold){x=16;y=14;w=68;h=72;}\n  const L=a=>a.map(p=>ln(x+p[0],y+p[1],p[2]||4)).join(\"\"), cx=x+w/2, mx=x+4, my=y+4;\n  const pill=mod(mx,my,12,26,6)+L([[10,11,3.6],[10,21,3.6]]);\n  const sq=mod(mx,my,26,26,7)+L([[11,11,4.4],[11,21,4.4],[21,11,4.4]]);\n  let cam=\"\";\n  if(b===\"Apple\"){\n    if(/iPhone (6s|7|8|SE|XR)/.test(n)) cam=L([[11,9,4.5]]);\n    else if(/iPhone (X|XS)$/.test(n)) cam=mod(mx,my,11,24,5.5)+L([[9.5,11,3.6],[9.5,21,3.6]]);\n    else if(/Pro/.test(n)) cam=mod(mx,my,26,26,7)+L([[11,11,4.6],[11,22,4.6],[22,16.5,4.6]]);\n    else cam=mod(mx,my,24,24,7)+L([[11,11,4.8],[19,19,4.8]]);\n  } else if(b===\"Google\"){\n    const k=+(n.match(/Pixel (\\d+)/)||[])[1]||0;\n    if(fold||(k>=6&&k<10)) cam=`<rect x=\"${x}\" y=\"${y+18}\" width=\"${w}\" height=\"13\" fill=\"#15171a\"/>`+L(pro?[[w*.3,24.5,3.6],[w*.5,24.5,3.6],[w*.7,24.5,3.6]]:[[w*.32,24.5,3.8],[w*.58,24.5,3.8]]);\n    else if(k>=10) cam=mod(x+5,y+16,w-10,16,8)+L([[w*.3,24,4],[w*.5,24,4],[w*.7,24,4]]);\n    else cam=mod(mx,my,16,14,4)+L([[10,11,3.5]]);\n  }\n  else if(b===\"Samsung\") cam=L([[9,12,4.2],[9,23,4.2],[9,34,4.2]]);\n  else if(b===\"Xiaomi\"||b===\"Tecno\") cam=pro?sq:pill;\n  else if(b===\"OnePlus\") cam=/ 9/.test(n)?sq:pill;\n  else if(b===\"Huawei\") cam=ring(cx,y+19,14,3);\n  else if(b===\"Honor\") cam=ring(x+18,y+18,14,pro?3:2);\n  else if(b===\"Nokia\"||b===\"Infinix\") cam=ring(cx,y+16,11,2);\n  else if(b===\"Motorola\") cam=mod(cx-6,y+5,12,26,6)+ln(cx,y+12,3.6)+ln(cx,y+23,3.6)+`<circle cx=\"${cx}\" cy=\"${y+h*.55}\" r=\"6\" fill=\"none\" stroke=\"rgba(255,255,255,.5)\" stroke-width=\"1.5\"/>`;\n  else if(b===\"Vivo\") cam=mod(mx,my,28,14,7)+L([[11,11,3.8],[21,11,3.8]]);\n  else if(b===\"Sony\") cam=mod(mx,my,12,36,4)+L([[10,11,3.6],[10,21,3.6],[10,31,3.6]]);\n  else if(b===\"ASUS\") cam=pill+(/ROG/.test(n)?`<circle cx=\"${cx}\" cy=\"${y+h*.58}\" r=\"13\" fill=\"none\" stroke=\"#e0364a\" stroke-width=\"2\"/><path d=\"M${x+6} ${y+h-10}h${w-12}\" stroke=\"#e0364a\" stroke-width=\"1.5\"/>`:\"\");\n  else if(b===\"Nothing\") cam=`<circle cx=\"${cx}\" cy=\"${y+h*.55}\" r=\"14\" fill=\"none\" stroke=\"#999\" stroke-width=\"1\"/><path d=\"M${x+6} ${y+h-12}l${w-12} -14M${x+6} ${y+h-8}h${w-12}\" stroke=\"#aaa\" stroke-width=\"1.2\"/>`+L([[10,10,3.8],[10,20,3.8]]);\n  else cam=pill;\n  return `<g${cond===\"dead\"?' opacity=\".5\"':\"\"}><rect x=\"${x}\" y=\"${y}\" width=\"${w}\" height=\"${h}\" rx=\"${r}\" fill=\"${c}\"/><rect x=\"${x+1.5}\" y=\"${y+1.5}\" width=\"${w-3}\" height=\"${h-3}\" rx=\"${r-1.5}\" fill=\"none\" stroke=\"rgba(255,255,255,.2)\"/>${fold?`<line x1=\"50\" y1=\"${y}\" x2=\"50\" y2=\"${y+h}\" stroke=\"rgba(0,0,0,.35)\"/>`:\"\"}${cam}${fx(cond,x,y,w,h)}<\/g>`;\n}\nfunction pcArt(m,cond){\n  const n=m.name,b=m.brand,game=/Nitro|TUF|MSI|RTX|GTX|Katana|GF63|ROG/.test(n);\n  let o=\"\";\n  if(b===\"Сборка\"){\n    const acc=/RTX/.test(n)?\"#a45bff\":/GTX/.test(n)?\"#2fd0a0\":\"#8a8f99\";\n    o=`<rect x=\"30\" y=\"8\" width=\"40\" height=\"84\" rx=\"4\" fill=\"#1a1c21\"/><rect x=\"34\" y=\"12\" width=\"32\" height=\"62\" rx=\"2\" fill=\"#0d1117\" stroke=\"${acc}\" stroke-width=\".8\"/>`+\n      (game?[24,42,60].map(cy=>`<circle cx=\"50\" cy=\"${cy}\" r=\"7\" fill=\"none\" stroke=\"${acc}\" stroke-width=\"2\"/><circle cx=\"50\" cy=\"${cy}\" r=\"2\" fill=\"${acc}\"/>`).join(\"\"):`<rect x=\"38\" y=\"18\" width=\"24\" height=\"4\" fill=\"#3a3f4a\"/><rect x=\"38\" y=\"26\" width=\"24\" height=\"4\" fill=\"#3a3f4a\"/><rect x=\"38\" y=\"34\" width=\"24\" height=\"10\" fill=\"#2a2e36\"/>`)+\n      `<circle cx=\"50\" cy=\"83\" r=\"3.5\" fill=\"none\" stroke=\"#9aa0ab\" stroke-width=\"1.2\"/>`;\n  } else {\n    const col={Apple:\"#c7cad1\",Lenovo:\"#23252a\",HP:\"#a9afb8\",Acer:\"#b8bcc4\",Dell:\"#a3a9b2\",ASUS:\"#23252b\",MSI:\"#1d1e23\"}[b]||\"#888\";\n    const scr=cond===\"dead\"?\"#050607\":game?\"#2a0f3a\":\"#16324f\";\n    o=`<rect x=\"14\" y=\"20\" width=\"72\" height=\"48\" rx=\"4\" fill=\"${col}\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"40\" rx=\"1.5\" fill=\"${scr}\"/>`+\n      (cond===\"dead\"?\"\":`<circle cx=\"${game?64:40}\" cy=\"48\" r=\"14\" fill=\"${game?\"#e0364a\":\"#3b8fe0\"}\" opacity=\".55\"/>`)+\n      (b===\"Apple\"?`<rect x=\"43\" y=\"24\" width=\"14\" height=\"3\" rx=\"1.5\" fill=\"${col}\"/>`:\"\")+\n      `<path d=\"M6 70h88l-5 9H11z\" fill=\"${col}\" stroke=\"rgba(0,0,0,.25)\" stroke-width=\".6\"/><rect x=\"40\" y=\"73\" width=\"20\" height=\"3\" rx=\"1.5\" fill=\"rgba(0,0,0,.25)\"/>`+\n      (b===\"Lenovo\"?`<circle cx=\"50\" cy=\"73.5\" r=\"1.6\" fill=\"#e0242b\"/>`:\"\")+\n      (game?`<path d=\"M11 80h78\" stroke=\"#e0364a\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>`:\"\");\n  }\n  if(cond===\"screen\") o+=`<path d=\"M38 14q4-5 0-10M50 14q4-5 0-10M62 14q4-5 0-10\" stroke=\"#ff6b4a\" fill=\"none\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>`;\n  if(cond===\"scratch\") o+=`<path d=\"M24 56l18 -6M46 60l16 -5\" stroke=\"#fff\" opacity=\".6\" stroke-width=\".9\"/>`;\n  return o;\n}\nfunction conArt(m,cond){\n  const n=m.name; let o=\"\";\n  if(n===\"PlayStation 5\"){\n    o=`<rect x=\"39\" y=\"8\" width=\"22\" height=\"84\" rx=\"9\" fill=\"#14161a\"/><path d=\"M39 17Q28 50 39 83L39 83Q31 83 31 76L31 24Q31 17 39 17Z\" fill=\"#f4f5f7\"/><path d=\"M61 17Q72 50 61 83Q69 83 69 76L69 24Q69 17 61 17Z\" fill=\"#f4f5f7\"/><rect x=\"48.5\" y=\"30\" width=\"3\" height=\"40\" rx=\"1.5\" fill=\"#3b7bff\" opacity=\"${cond===\"dead\"?\".15\":\".9\"}\"/>`;\n  } else if(n===\"PlayStation 4\"){\n    o=`<polygon points=\"12,56 70,38 90,45 32,64\" fill=\"#31343b\"/><polygon points=\"12,56 32,64 32,74 12,66\" fill=\"#1a1c21\"/><polygon points=\"32,64 90,45 90,54 32,74\" fill=\"#101215\"/><path d=\"M34 69L88 51\" stroke=\"${cond===\"dead\"?\"#333\":\"#3b7bff\"}\" stroke-width=\"1.6\"/>`;\n  } else if(n===\"PlayStation 3\"){\n    o=`<rect x=\"10\" y=\"34\" width=\"80\" height=\"34\" rx=\"6\" fill=\"#121316\"/><path d=\"M14 38Q50 31 86 38\" stroke=\"rgba(255,255,255,.35)\" stroke-width=\"1.4\" fill=\"none\"/><rect x=\"18\" y=\"52\" width=\"46\" height=\"3\" rx=\"1.5\" fill=\"#000\"/><rect x=\"72\" y=\"46\" width=\"12\" height=\"3\" rx=\"1.5\" fill=\"#c9ccd2\"/><circle cx=\"76\" cy=\"58\" r=\"2.4\" fill=\"${cond===\"dead\"?\"#333\":\"#e0364a\"}\"/><rect x=\"80\" y=\"55\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#2a2d33\"/>`;\n  } else if(n===\"Xbox 360\"){\n    o=`<rect x=\"12\" y=\"36\" width=\"76\" height=\"32\" rx=\"8\" fill=\"#e9eaee\"/><rect x=\"12\" y=\"36\" width=\"76\" height=\"32\" rx=\"8\" fill=\"none\" stroke=\"rgba(0,0,0,.18)\"/><rect x=\"42\" y=\"46\" width=\"40\" height=\"5\" rx=\"2.5\" fill=\"#9ea2ab\"/><circle cx=\"27\" cy=\"52\" r=\"7\" fill=\"none\" stroke=\"${cond===\"dead\"?\"#777\":\"#58b02a\"}\" stroke-width=\"2.6\"/><rect x=\"42\" y=\"57\" width=\"26\" height=\"2\" rx=\"1\" fill=\"#c3c6cc\"/>`;\n  } else {\n    const scr=cond===\"dead\"?\"#050607\":\"#12385c\";\n    o=`<rect x=\"6\" y=\"34\" width=\"88\" height=\"36\" rx=\"15\" fill=\"#23262c\"/><rect x=\"26\" y=\"38\" width=\"48\" height=\"28\" rx=\"2\" fill=\"${scr}\"/>${cond===\"dead\"?\"\":`<circle cx=\"50\" cy=\"52\" r=\"9\" fill=\"#2f8cff\" opacity=\".5\"/>`}<circle cx=\"16\" cy=\"46\" r=\"4.6\" fill=\"#0f1114\"/><circle cx=\"84\" cy=\"55\" r=\"4.6\" fill=\"#0f1114\"/><path d=\"M13 57h6M16 54v6\" stroke=\"#8a8f99\" stroke-width=\"1.6\"/><circle cx=\"82\" cy=\"43\" r=\"1.8\" fill=\"#8a8f99\"/><circle cx=\"86\" cy=\"47\" r=\"1.8\" fill=\"#8a8f99\"/><circle cx=\"78\" cy=\"47\" r=\"1.8\" fill=\"#8a8f99\"/><circle cx=\"82\" cy=\"51\" r=\"1.8\" fill=\"#8a8f99\"/>`;\n  }\n  if(cond===\"dead\") o=`<g opacity=\".5\">${o}<\/g>`;\n  if(cond===\"screen\") o+=`<path d=\"M38 28q4-5 0-10M50 28q4-5 0-10M62 28q4-5 0-10\" stroke=\"#ff6b4a\" fill=\"none\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>`;\n  if(cond===\"scratch\") o+=`<path d=\"M24 58l18 -6M46 62l16 -5\" stroke=\"#fff\" opacity=\".6\" stroke-width=\".9\"/>`;\n  return o;\n}\nfunction icon(mi,cond){ const m=MODELS[mi]; return `<svg viewBox=\"0 0 100 100\" aria-hidden=\"true\">${isPC(m)?pcArt(m,cond):isCon(m)?conArt(m,cond):phoneArt(m,cond)}<\/svg>`; }\nconst CONDS = {\n  good:    { label:\"Отличное\",      factor:1.00, repair:0 },\n  scratch: { label:\"Царапины\",      factor:0.90, repair:0 },\n  screen:  { label:\"Битый экран\",   factor:0.70, repair:0.22 },\n  dead:    { label:\"Не включается\", factor:0.45, repair:0.45 }\n};\nconst CKEYS = Object.keys(CONDS);\nconst GOAL=500000, DAYS=30, MAX_INV=6, START=10000, RENT=500;\nconst FILTERS = [\n  { id:\"all\", label:\"Все\" }, { id:\"good\", label:\"Отличные\" },\n  { id:\"cheap\", label:\"До 10 000 ₽\" }, { id:\"broken\", label:\"Требуют ремонта\" }\n];\n\nconst rnd=(a,b)=>a+Math.random()*(b-a);\nconst fmt=n=>Math.round(n).toLocaleString(\"ru-RU\")+\" ₽\";\nconst round100=n=>Math.round(n/100)*100;\nconst worth=(mi,c,f)=>MODELS[mi].base*S.market[MODELS[mi].name]*CONDS[c].factor*(f?1.25:1);\nconst sellPrice=it=>round100(worth(it.mi,it.cond,it.flashed)*0.95);\nconst repairCost=it=>round100(MODELS[it.mi].base*CONDS[it.cond].repair);\nconst flashCost=it=>Math.max(300,round100(MODELS[it.mi].base*0.04));\nconst FLASH_RISK={ good:0.20, scratch:0.25, screen:0.35 };\n\nlet S, tab=\"shop\", filter=\"all\", brand=\"all\", cat=\"phone\", query=\"\", openId=null, toastTimer=null;\n\nconst NICK1=[\"Тёмный\",\"Быстрый\",\"Хитрый\",\"Рыжий\",\"Весёлый\",\"Ночной\",\"Старый\",\"Лунный\",\"Железный\",\"Тихий\",\"Дерзкий\",\"Сонный\"];\nconst NICK2=[\"Лис\",\"Барыга\",\"Кот\",\"Волк\",\"Ёж\",\"Дракон\",\"Сурок\",\"Бобёр\",\"Енот\",\"Тигр\",\"Орёл\",\"Хомяк\"];\nconst NICK3=[\"Гаджет_Мастер\",\"Техно_Бро\",\"Ломбард_Центр\",\"Дядя_Миша\",\"Тётя_Люда\",\"Айфон_Гуру\",\"Техноманьяк\",\"Свой_Человек\",\"Мобайл_Дока\",\"Честный_Саша\"];\nconst nick=()=>{ const p=a=>a[Math.floor(Math.random()*a.length)]; return Math.random()<.3?p(NICK3):p(NICK1)+\"_\"+p(NICK2); };\nfunction genOffers(only){\n  const out=[];\n  const cats=only===\"pc\"?Array(6).fill(\"pc\"):only===\"con\"?Array(4).fill(\"con\"):only===\"phone\"?Array(14).fill(\"phone\"):[...Array(12).fill(\"phone\"),...Array(8).fill(\"pc\"),...Array(4).fill(\"con\")];\n  for(let i=0;i<cats.length;i++){\n    const pool=MODELS.map((m,j)=>j).filter(j=>kind(MODELS[j])===cats[i]);\n    const mi=pool[Math.floor(Math.random()*pool.length)];\n    const cond=CKEYS[Math.floor(Math.random()*CKEYS.length)];\n    out.push({ id:Math.random().toString(36).slice(2), mi, cond, price:round100(worth(mi,cond)*rnd(0.72,0.95)), haggled:false, seller:nick() });\n  }\n  for(let i=out.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }\n  return out;\n}\nfunction newGame(){\n  S={ day:1, money:START, inv:[], offers:[], market:{}, news:\"\", over:null, log:[], hasPC:true, hasCon:true };\n  MODELS.forEach(m=>S.market[m.name]=1);\n  S.offers=genOffers(); openId=null; tab=\"shop\"; render();\n}\nfunction updateMarket(){\n  MODELS.forEach(m=>{ S.market[m.name]=Math.min(1.5,Math.max(0.6,S.market[m.name]*rnd(0.92,1.08))); });\n  S.news=\"\";\n  if(Math.random()<0.35){\n    const m=MODELS[Math.floor(Math.random()*MODELS.length)];\n    if(Math.random()<0.5){ S.market[m.name]=Math.max(0.6,S.market[m.name]*0.75); S.news=`Вышла новинка-конкурент: ${m.name} дешевеет.`; }\n    else { S.market[m.name]=Math.min(1.5,S.market[m.name]*1.3); S.news=`${m.name} в тренде, цены растут.`; }\n  }\n}\nfunction toast(t){ const el=document.getElementById(\"layer\"); let n=document.getElementById(\"toast\"); if(!n){ n=document.createElement(\"div\"); n.id=\"toast\"; n.className=\"toast\"; el.appendChild(n);} n.textContent=t; clearTimeout(toastTimer); toastTimer=setTimeout(()=>n.remove(),2600); }\n\nfunction buy(id){\n  const o=S.offers.find(x=>x.id===id); if(!o) return;\n  if(S.inv.length>=MAX_INV) return toast(\"Склад полон. Продай что-нибудь.\");\n  if(S.money<o.price) return toast(\"Не хватает денег.\");\n  S.money-=o.price; S.inv.push({ id:o.id, mi:o.mi, cond:o.cond, cost:o.price });\n  S.offers=S.offers.filter(x=>x.id!==id); openId=null;\n  toast(`Покупка: ${MODELS[o.mi].name} за ${fmt(o.price)}`); render();\n}\nfunction haggle(id){\n  const o=S.offers.find(x=>x.id===id); if(!o||o.haggled) return;\n  o.haggled=true;\n  if(Math.random()<0.5){ o.price=round100(o.price*0.88); toast(`Продавец согласился: ${fmt(o.price)}`); }\n  else toast(\"Продавец не уступил.\");\n  render();\n}\nfunction repair(id){\n  const it=S.inv.find(x=>x.id===id); if(!it||it.cond===\"good\") return;\n  const c=repairCost(it); if(S.money<c) return toast(\"Не хватает на ремонт.\");\n  S.money-=c; it.cost+=c; it.cond=\"good\"; toast(`Починили за ${fmt(c)}`); render();\n}\nfunction flash(id){\n  const it=S.inv.find(x=>x.id===id); if(!it||it.flashed||it.cond===\"dead\") return;\n  const c=flashCost(it); if(S.money<c) return toast(\"Не хватает на прошивку.\");\n  S.money-=c; it.cost+=c;\n  if(Math.random()<FLASH_RISK[it.cond]){ it.cond=\"dead\"; toast(\"Кирпич! Устройство не включается. Чини или продавай как есть.\"); }\n  else { it.flashed=true; toast(\"Прошивка удалась. Цена выросла на 25%.\"); }\n  render();\n}\nfunction flashBlock(it){\n  if(it.flashed) return `<div class=\"d\">Устройство прошито: цена выше на 25%.<\/div>`;\n  if(it.cond===\"dead\") return `<div class=\"d\">Не включается. Сначала почини, потом можно прошивать.<\/div>`;\n  const c=flashCost(it), r=Math.round(FLASH_RISK[it.cond]*100);\n  return `<button style=\"width:100%;margin-top:12px\" ${S.money<c?\"disabled\":\"\"} onclick=\"flash('${it.id}')\">Перепрошить за ${fmt(c)} · риск кирпича ${r}%<\/button><div class=\"d\" style=\"margin:8px 0 0\">Успех: цена +25%. Провал: устройство превращается в кирпич.<\/div>`;\n}\nfunction sell(id){\n  const i=S.inv.findIndex(x=>x.id===id); if(i<0) return;\n  const it=S.inv[i], p=sellPrice(it);\n  S.money+=p; S.inv.splice(i,1); openId=null;\n  const pr=p-it.cost; toast(`Продано за ${fmt(p)}. ${pr>=0?\"Прибыль\":\"Убыток\"} ${fmt(Math.abs(pr))}`); render();\n}\nfunction nextDay(){\n  S.money-=RENT;\n  if(S.money<0){ S.over=\"bankrupt\"; return render(); }\n  if(S.day>=DAYS){ S.over=S.money>=GOAL?\"win\":\"lose\"; return render(); }\n  S.day++; updateMarket(); S.offers=genOffers(); tab=\"shop\"; render();\n  toast(S.news ? \"Новый день. \"+S.news : \"Новый день. Новые объявления.\");\n}\nfunction setTab(t){ tab=t; openId=null; render(); window.scrollTo(0,0); }\nfunction setFilter(f){ filter=f; render(); }\nfunction setBrand(b){ brand=b; render(); }\nfunction setCat(c){ cat=c; brand=\"all\"; query=\"\"; const q=document.getElementById(\"q\"); if(q) q.value=\"\"; tab=\"shop\"; render(); window.scrollTo(0,0); }\nfunction setQuery(v){ query=v.toLowerCase(); renderMain(); }\n\nfunction matchOffer(o){\n  const name=(MODELS[o.mi].name+\" \"+MODELS[o.mi].brand+\" \"+(MODELS[o.mi].alt||\"\")).toLowerCase();\n  if(query && !name.includes(query)) return false;\n  if(brand!==\"all\" && MODELS[o.mi].brand!==brand) return false;\n  if(filter===\"good\") return o.cond===\"good\";\n  if(filter===\"cheap\") return o.price<=10000;\n  if(filter===\"broken\") return o.cond!==\"good\";\n  return true;\n}\n\nfunction adCard(o){\n  return `<button class=\"ad\" onclick=\"openOffer('${o.id}')\">\n    <div class=\"pic\">${icon(o.mi,o.cond)}<span class=\"tag\">${condLabel(o.mi,o.cond)}<\/span><\/div>\n    <div class=\"info\"><div class=\"price\">${fmt(o.price)}<\/div>\n    <div class=\"title\">${MODELS[o.mi].name}<\/div>\n    <div class=\"sub\">${o.seller}<\/div><\/div><\/button>`;\n}\nfunction stockRow(it){\n  return `<div class=\"row-item\" onclick=\"openStock('${it.id}')\">\n    <div class=\"pic\">${icon(it.mi,it.cond)}<\/div>\n    <div class=\"grow\"><div class=\"price\">${fmt(sellPrice(it))}<\/div>\n    <div class=\"title\">${MODELS[it.mi].name}<\/div>\n    <div class=\"sub\">${condLabel(it.mi,it.cond)}${it.flashed?\" · прошит\":\"\"} · вложено ${fmt(it.cost)}<\/div><\/div>\n    <span style=\"color:var(--muted)\">›<\/span><\/div>`;\n}\n\nfunction renderChips(){\n  document.getElementById(\"chips\").innerHTML = FILTERS.map(f=>\n    `<button class=\"chip ${filter===f.id?\"on\":\"\"}\" onclick=\"setFilter('${f.id}')\">${f.label}<\/button>`).join(\"\");\n}\nfunction renderMain(){\n  const main=document.getElementById(\"main\");\n  if(S.over && ['win','lose','bankrupt'].includes(S.over)){\n    const m={win:[\"Ты выиграл!\",\"Ты накопил \"+fmt(GOAL)+\". Хватит на машину, можно ехать в салон!\"],\n      lose:[\"Месяц закрыт\",`Набрано ${fmt(S.money)}. На машину не хватило ${fmt(GOAL-S.money)}.`],\n      bankrupt:[\"Банкрот\",\"Аренда съела последние деньги. Покупай только то, что точно уйдёт.\"],\n      garage:[\"Глава 1 окончена\",\"Четвёрка стоит в гараже. Ты купил её за 500 000 ₽ и больше не продаёшь.\"]}[S.over];\n    main.innerHTML=`<div class=\"end\"><h2>${m[0]}<\/h2><p>${m[1]}<\/p><button class=\"primary\" onclick=\"newGame()\">Начать заново<\/button><\/div>`;\n    return;\n  }\n  if(tab===\"shop\"){\n    const list=S.offers.filter(matchOffer);\n    main.innerHTML = list.length\n      ? `<div class=\"grid\">${list.map(adCard).join(\"\")}<\/div>`\n      : `<div class=\"empty\">Ничего не найдено. Попробуй другой фильтр или заверши день.<\/div>`;\n  } else if(tab===\"stock\"){\n    main.innerHTML = `<div class=\"section-title\">Склад (${S.inv.length}/${MAX_INV})<\/div>` +\n      (S.inv.length ? S.inv.map(stockRow).join(\"\") : `<div class=\"empty\">Склад пуст. Купи что-нибудь в объявлениях.<\/div>`);\n  } else {\n    const worthAll=S.inv.reduce((s,it)=>s+sellPrice(it),0);\n    main.innerHTML = `\n      <div class=\"section-title\">Кабинет<\/div>\n      <div class=\"stat\"><div class=\"k\">День<\/div><div class=\"v\">${S.day} из ${DAYS}<\/div>\n        <div class=\"bar\"><div style=\"width:${S.day/DAYS*100}%\"><\/div><\/div><\/div>\n      <div class=\"stat\"><div class=\"k\">Деньги<\/div><div class=\"v\">${fmt(S.money)}<\/div><\/div>\n      <div class=\"stat\"><div class=\"k\">Товар на складе, по рынку<\/div><div class=\"v\">${fmt(worthAll)}<\/div><\/div>\n      <div class=\"stat\"><div class=\"k\">Аренда точки<\/div><div class=\"v\">${fmt(RENT)} в день<\/div><\/div>\n      ${S.news?`<div class=\"news\">${S.news}<\/div>`:\"\"}\n      <button class=\"primary\" style=\"width:100%;padding:14px\" onclick=\"nextDay()\">Завершить день<\/button>\n      <button style=\"width:100%;padding:14px;margin-top:10px\" onclick=\"openAdminFromCabinet()\">🛠️ Админка<\/button>\n      <button style=\"width:100%;padding:14px;margin-top:10px\" onclick=\"resetGame()\">${resetAsk?\"Точно сбросить? Нажми ещё раз\":\"Новая игра\"}<\/button>`;\n  }\n}\nfunction render(){\n  document.getElementById(\"money\").textContent=fmt(S.money);\n  [\"shop\",\"stock\",\"me\"].forEach(t=>document.getElementById(\"tab-\"+t).classList.toggle(\"on\",t===tab));\n  renderChips(); renderMain(); renderChapter(); renderSheet();\n  save();\n}\n\nfunction renderChapter(){\n  const el=document.getElementById(\"chapter\");\n  if (EMBEDDED || S.chapter===2 || S.over){ el.innerHTML=\"\"; return; }\n  if (S.money >= GOAL){ startChapter2(); el.innerHTML=\"\"; return; }   // цель достигнута: сразу во 2 главу\n  const pct = Math.min(100, Math.round(S.money/GOAL*100));\n  el.innerHTML = `<div style=\"padding:10px 12px 0\"><div style=\"background:#fff;border-radius:12px;padding:10px 12px;font-size:13px;color:#1f1f1f\">\n    <b>Цель главы 1:<\/b> ${fmt(GOAL)}\n    <div style=\"height:8px;background:#eef0f3;border-radius:6px;margin-top:6px;overflow:hidden\"><div style=\"height:100%;width:${pct}%;background:#00aaff\"><\/div><\/div>\n    <div style=\"margin-top:4px;color:#7b7f87\">${fmt(S.money)} · ${pct}%<\/div><\/div><\/div>`;\n}\n// Переход во 2 главу: гараж встроен в этот файл (открывается поверх, без отдельного файла)\nfunction startChapter2(){\n  S.chapter = 2; save();\n  openChapter2Screen();\n}\n// Экран 2 главы: гараж на весь экран. Из него нельзя вернуться в торговлю.\nfunction openChapter2Screen(){\n  if (EMBEDDED || typeof GARAGE_HTML === \"undefined\") return;\n  if (document.getElementById(\"garage\")) return;\n  const f = document.createElement(\"iframe\");\n  f.id = \"garage\";\n  f.setAttribute(\"sandbox\", \"allow-scripts allow-same-origin\");\n  f.srcdoc = GARAGE_HTML;\n  f.style.cssText = \"position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9000;background:#000\";\n  document.body.appendChild(f);\n}\n\nfunction openOffer(id){ openId={type:\"offer\",id}; renderSheet(); }\nfunction openStock(id){ openId={type:\"stock\",id}; renderSheet(); }\nfunction closeSheet(){ openId=null; renderSheet(); }\n\nfunction renderSheet(){\n  const layer=document.getElementById(\"layer\");\n  if(!openId || S.over){ layer.querySelectorAll(\".sheet-bg\").forEach(n=>n.remove()); return; }\n  let html=\"\";\n  if(openId.type===\"offer\"){\n    const o=S.offers.find(x=>x.id===openId.id); if(!o){ openId=null; return renderSheet(); }\n    const w=worth(o.mi,o.cond);\n    const pct=Math.round((1-o.price/w)*100);\n    html=`<div class=\"big\">${icon(o.mi,o.cond)}<button class=\"close\" onclick=\"closeSheet()\">✕<\/button><\/div>\n      <div class=\"body\"><div class=\"p\">${fmt(o.price)}<\/div>\n      <div class=\"t\">${MODELS[o.mi].name}<\/div>\n      <div class=\"kv\"><span>Состояние<\/span><span>${condLabel(o.mi,o.cond)}<\/span><\/div>\n      <div class=\"kv\"><span>Рыночная цена сейчас<\/span><span>${fmt(w)}<\/span><\/div>\n      <div class=\"kv\"><span>Скидка от рынка<\/span><span style=\"color:${pct>0?\"var(--green)\":\"var(--red)\"}\">${pct}%<\/span><\/div>\n      <div class=\"kv\"><span>Продавец<\/span><span>${o.seller}<\/span><\/div>\n      <div class=\"d\">${CONDS[o.cond].repair>0?\"Требует ремонта. После починки продаётся по полной цене.\":\"Без дефектов. Можно сразу перепродать.\"}<\/div>\n      <div class=\"btns\"><button ${o.haggled?\"disabled\":\"\"} onclick=\"haggle('${o.id}')\">Торговаться<\/button>\n      <button class=\"primary\" onclick=\"buy('${o.id}')\">Купить за ${fmt(o.price)}<\/button><\/div><\/div>`;\n  } else {\n    const it=S.inv.find(x=>x.id===openId.id); if(!it){ openId=null; return renderSheet(); }\n    const rc=repairCost(it), sp=sellPrice(it);\n    html=`<div class=\"big\">${icon(it.mi,it.cond)}<button class=\"close\" onclick=\"closeSheet()\">✕<\/button><\/div>\n      <div class=\"body\"><div class=\"p\">${fmt(sp)}<\/div>\n      <div class=\"t\">${MODELS[it.mi].name}<\/div>\n      <div class=\"kv\"><span>Состояние<\/span><span>${condLabel(it.mi,it.cond)}<\/span><\/div>\n      <div class=\"kv\"><span>Прошивка<\/span><span>${it.flashed?\"Есть\":\"Нет\"}<\/span><\/div>\n      <div class=\"kv\"><span>Вложено<\/span><span>${fmt(it.cost)}<\/span><\/div>\n      <div class=\"kv\"><span>Прибыль, если продать<\/span><span style=\"color:${sp>=it.cost?\"var(--green)\":\"var(--red)\"}\">${fmt(sp-it.cost)}<\/span><\/div>\n      ${flashBlock(it)}<div class=\"btns\">${it.cond!==\"good\"?`<button ${S.money<rc?\"disabled\":\"\"} onclick=\"repair('${it.id}')\">Починить ${fmt(rc)}<\/button>`:\"\"}\n      <button class=\"primary\" onclick=\"sell('${it.id}')\">Продать за ${fmt(sp)}<\/button><\/div><\/div>`;\n  }\n  layer.innerHTML=`<div class=\"sheet-bg\" onclick=\"if(event.target===this)closeSheet()\"><div class=\"sheet\">${html}<\/div><\/div>`;\n}\n\n/* ===== АДМИНКА: 5 нажатий на логотип, код или ключ ===== */\nconst ADMIN_CODE = \"maks\";                      // одноразовый код\nconst REUSABLE_KEY = \"idi_naxyu\";               // многоразовый ключ\nconst ONE_TIME_KEYS = [\"ODIN-7K2P\", \"ODIN-9QXM\", \"ODIN-4RTW\", \"ODIN-B8LZ\", \"ODIN-H3NV\"];  // каждый один раз\nconst SUPER_KEY = \"UNIKUM-7Q9X\";                // расширенная админка (любые суммы)\nlet adminUnlocked = false, adminTaps = 0, adminTimer = null;\n\nfunction logoTap(){\n  adminTaps++; clearTimeout(adminTimer);\n  adminTimer = setTimeout(()=>{ adminTaps=0; }, 1500);\n  if (adminTaps >= 5){ adminTaps = 0; openCodeModal(); }\n}\n// Проверка ключа: возвращает \"ok\", \"used\" или \"bad\" и отмечает использованные\nfunction checkKey(v){\n  v = (v||\"\").trim().toUpperCase();\n  if (v === REUSABLE_KEY.toUpperCase()) return \"ok\";\n  if (v === ADMIN_CODE.toUpperCase()){ if (S.makUsed) return \"used\"; S.makUsed = true; return \"ok\"; }\n  if (v === SUPER_KEY){ S.adminSuper = true; return \"ok\"; }\n  if (ONE_TIME_KEYS.includes(v)){ if (S.usedKeys.includes(v)) return \"used\"; S.usedKeys.push(v); return \"ok\"; }\n  return \"bad\";\n}\nfunction unlockWith(v){\n  const r = checkKey(v);\n  if (r === \"ok\"){ S.adminSaved = true; save(); adminUnlocked = true; }\n  return r;\n}\nconst keyMsg = r => r === \"used\" ? \"Этот ключ уже использован\" : \"Неверный ключ\";\n\nfunction openCodeModal(){\n  if (document.getElementById(\"codeModal\") || document.getElementById(\"admin\")) return;\n  const d = document.createElement(\"div\");\n  d.id = \"codeModal\"; d.className = \"modal\";\n  d.innerHTML = `<div class=\"mbox\">\n    <div style=\"font-weight:800;font-size:18px;margin-bottom:8px\">Вход в админку<\/div>\n    <input id=\"a-code\" type=\"password\" placeholder=\"Код\">\n    <div class=\"row\"><button class=\"primary\" onclick=\"checkCode()\">Войти<\/button><button onclick=\"closeCodeModal()\">Отмена<\/button><\/div>\n  <\/div>`;\n  d.addEventListener(\"click\", e=>{ if (e.target===d) closeCodeModal(); });\n  document.body.appendChild(d);\n  setTimeout(()=>{ const el=document.getElementById(\"a-code\"); if(el) el.focus(); }, 50);\n}\nfunction closeCodeModal(){ const d=document.getElementById(\"codeModal\"); if (d) d.remove(); }\nfunction checkCode(){\n  const v = document.getElementById(\"a-code\").value;\n  const r = unlockWith(v);\n  closeCodeModal();\n  if (r === \"ok\") openAdmin(); else toast(keyMsg(r));\n}\n\nfunction openAdmin(){\n  if (document.getElementById(\"admin\")) return;\n  if (S.adminSaved) adminUnlocked = true;\n  const d = document.createElement(\"div\");\n  d.id = \"admin\"; d.className = \"modal\";\n  d.innerHTML = `<div class=\"mbox\" id=\"adminBox\"><\/div>`;\n  d.addEventListener(\"click\", e=>{ if (e.target===d) closeAdmin(); });\n  document.body.appendChild(d);\n  renderAdmin();\n}\n// Из кабинета панель открывается всегда: внизу есть поле для ключа\nfunction openAdminFromCabinet(){ openAdmin(); }\nfunction closeAdmin(){ const a=document.getElementById(\"admin\"); if (a) a.remove(); adminUnlocked = false; }\n\nfunction adminControls(){\n  const modelOpts = MODELS.map((m,i)=>`<option value=\"${i}\">${m.name}<\/option>`).join(\"\");\n  const condOpts = Object.keys(CONDS).map(k=>`<option value=\"${k}\">${PC_LABELS[k]||CONDS[k].label}<\/option>`).join(\"\");\n  return `\n    <div class=\"kv\"><span>Деньги сейчас<\/span><span>${fmt(S.money)}<\/span><\/div>\n    <div class=\"kv\"><span>Склад<\/span><span>${S.inv.length}/${MAX_INV}<\/span><\/div>\n    <div class=\"sub\">Деньги<\/div>\n    <div class=\"row\"><button onclick=\"adminAddMoney(100000)\">+100 000<\/button><button onclick=\"adminAddMoney(1000000)\">+1 000 000<\/button><button onclick=\"adminAddMoney(10000000)\">+10 000 000<\/button><\/div>\n    <div class=\"row\"><input id=\"a-set\" type=\"number\" placeholder=\"Сколько денег\"><button class=\"primary\" onclick=\"adminSetMoney()\">Задать<\/button><\/div>\n    <div class=\"sub\">Добавить предмет на склад<\/div>\n    <select id=\"a-model\">${modelOpts}<\/select>\n    <select id=\"a-cond\">${condOpts}<\/select>\n    <input id=\"a-cost\" type=\"number\" placeholder=\"Вложено (пусто = 0)\">\n    <label style=\"display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 8px\"><input id=\"a-flash\" type=\"checkbox\" style=\"width:auto;margin:0\"> Прошит<\/label>\n    <div class=\"row\"><button class=\"primary\" onclick=\"adminAddItem()\">Добавить<\/button><\/div>\n    ${S.adminSuper ? `\n    <div class=\"sub\" style=\"color:#8a1f1f\"><b>Расширенная админка<\/b><\/div>\n    <div class=\"sub\">Любая сумма<\/div>\n    <div class=\"row\"><input id=\"a-cmoney\" type=\"number\" placeholder=\"Сумма ₽\"><button onclick=\"adminCustomMoney()\">Добавить<\/button><\/div>` : \"\"}`;\n}\nfunction renderAdmin(){\n  const box = document.getElementById(\"adminBox\"); if (!box) return;\n  const title = `<div style=\"font-weight:800;font-size:18px\">Админка<\/div>`;\n  const main = adminUnlocked ? adminControls() : `<div class=\"sub\" style=\"margin:16px 0\">Панель заблокирована. Введи ключ внизу.<\/div>`;\n  const bottom = adminUnlocked\n    ? `<div class=\"row\" style=\"margin-top:14px\"><button onclick=\"admLogout()\">Выйти из админки<\/button><button onclick=\"closeAdmin()\">Закрыть<\/button><\/div>`\n    : `<div class=\"sub\" style=\"margin-top:14px\">Ключ<\/div>\n       <div class=\"row\"><input id=\"a-key\" placeholder=\"Введи ключ\" autocomplete=\"off\"><\/div>\n       <div class=\"row\"><button class=\"primary\" onclick=\"tryKey()\">Открыть<\/button><button onclick=\"closeAdmin()\">Закрыть<\/button><\/div>`;\n  box.innerHTML = title + main + bottom + `<div class=\"msg\" id=\"a-msg\"><\/div>`;\n}\nfunction aMsg(t){ const el=document.getElementById(\"a-msg\"); if (el) el.textContent = t; }\nfunction tryKey(){\n  const r = unlockWith(document.getElementById(\"a-key\").value);\n  if (r !== \"ok\") return aMsg(keyMsg(r));\n  renderAdmin(); toast(\"Админка открыта\");\n}\n// Полный выход: при следующем открытии снова нужен ключ. Использованные ключи не сбрасываются.\nfunction admLogout(){\n  S.adminSaved = false; S.adminSuper = false; save();\n  closeAdmin(); toast(\"Вы вышли из админки\");\n}\nfunction adminAddMoney(n){ S.money += n; render(); renderAdmin(); }\nfunction adminCustomMoney(){\n  const n = Math.round(+document.getElementById(\"a-cmoney\").value);\n  if (!n) return aMsg(\"Введи сумму\");\n  S.money += n; render(); renderAdmin();\n}\nfunction adminSetMoney(){\n  const el = document.getElementById(\"a-set\");\n  if (el.value === \"\") return aMsg(\"Введи сумму\");\n  S.money = Math.max(0, Math.round(+el.value)); el.value = \"\";\n  render(); renderAdmin();\n}\nfunction adminAddItem(){\n  const mi = +document.getElementById(\"a-model\").value;\n  const cond = document.getElementById(\"a-cond\").value;\n  const cost = Math.max(0, Math.round(+document.getElementById(\"a-cost\").value || 0));\n  const flashed = document.getElementById(\"a-flash\").checked;\n  S.inv.push({ id:Math.random().toString(36).slice(2), mi, cond, cost, flashed });\n  render(); renderAdmin();\n  toast(`Добавлено на склад: ${MODELS[mi].name}`);\n}\n\nconst SAVE_KEY=\"perekup-save-v1\";\nlet resetAsk=false;\nfunction save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }\nfunction load(){\n  try{\n    const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;\n    const d=JSON.parse(raw);\n    if(!d||typeof d.day!==\"number\"||typeof d.money!==\"number\"||!Array.isArray(d.inv)||!Array.isArray(d.offers)||!d.market||typeof d.market!==\"object\") return false;\n    const ok=x=>x&&Number.isInteger(x.mi)&&x.mi>=0&&x.mi<MODELS.length&&CONDS[x.cond];\n    d.inv=d.inv.filter(ok); d.offers=d.offers.filter(ok);\n    MODELS.forEach(m=>{ if(typeof d.market[m.name]!==\"number\") d.market[m.name]=1; });\n    S=d; if(!S.log) S.log=[];\n    S.makUsed=!!S.makUsed; S.usedKeys=Array.isArray(S.usedKeys)?S.usedKeys:[];\n    S.adminSaved=!!S.adminSaved; S.adminSuper=!!S.adminSuper;\n    if(!['win','lose','bankrupt'].includes(S.over)) S.over=null;\n    if(!S.offers.length && !S.over) S.offers=genOffers();\n    if(!S.hasPC){ S.hasPC=true; if(!S.over) S.offers=S.offers.concat(genOffers(\"pc\")); }\n    if(!S.hasCon){ S.hasCon=true; if(!S.over) S.offers=S.offers.concat(genOffers(\"con\")); }\n    for(let i=S.offers.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [S.offers[i],S.offers[j]]=[S.offers[j],S.offers[i]]; }\n    S.offers.forEach(o=>{ if(!o.seller||/\\d/.test(o.seller)) o.seller=nick(); });\n    openId=null; tab=\"shop\";\n    return true;\n  }catch(e){ return false; }\n}\nfunction resetGame(){\n  if(!resetAsk){\n    resetAsk=true; renderMain();\n    setTimeout(()=>{ if(resetAsk){ resetAsk=false; if(tab===\"me\"&&!S.over) renderMain(); } },3000);\n    return;\n  }\n  resetAsk=false;\n  const keep={ makUsed:S.makUsed, usedKeys:S.usedKeys, adminSaved:S.adminSaved, adminSuper:S.adminSuper };\n  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}\n  newGame();\n  Object.assign(S, keep); save();\n}\n\nif(load()) render(); else newGame();\nif(S.chapter===2) openChapter2Screen();\n<\/script>\n<\/body>\n<\/html>\n";
+function openAviroApp(){
+  if (document.getElementById("aviroApp")) return;
+  const f = document.createElement("iframe");
+  f.id = "aviroApp";
+  f.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  f.srcdoc = TRADE_HTML;
+  f.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:80;background:#fff";
+  const b = document.createElement("button");
+  b.textContent = "✕";
+  b.style.cssText = "position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:81;width:44px;height:44px;border-radius:50%;border:none;background:#1f1f1f;color:#fff;font-size:18px";
+  b.onclick = () => { f.remove(); b.remove(); };
+  document.body.appendChild(f);
+  document.body.appendChild(b);
+}
+
+/* ===== СТАРТ ===== */
+if (load()){ applyCfg(); render(); } else { newGame(); render(); }
+if (!S.introDone){ S.introDone = true; save(); playIntro(); }
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
